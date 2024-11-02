@@ -40,10 +40,18 @@ public class BookingTableId implements Serializable {
     }
 
     // Override equals và hashCode để so sánh các khóa chính
+//    @Override
+//    public boolean equals(Object o) {
+//        if (this == o) return true;
+//        if (o == null || getClass() != o.getClass()) return false;
+//        BookingTableId that = (BookingTableId) o;
+//        return Objects.equals(bookingId, that.bookingId) && Objects.equals(tableId, that.tableId);
+//    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof BookingTableId)) return false;
         BookingTableId that = (BookingTableId) o;
         return Objects.equals(bookingId, that.bookingId) && Objects.equals(tableId, that.tableId);
     }

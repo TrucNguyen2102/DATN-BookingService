@@ -1,9 +1,11 @@
 package com.business.booking_service.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "booking")
@@ -13,11 +15,11 @@ public class Booking {
     @Column(name = "id")
     private Integer id;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm")
     @Column(name = "booking_time")
     private LocalDateTime bookingTime;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm")
     @Column(name = "expiry_time")
     private LocalDateTime expiryTime;
 
@@ -27,16 +29,27 @@ public class Booking {
     @Column(name = "user_id")
     private Integer userId; //Khóa ngoại của User trong user-service
 
+
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    private List<BookingTable> bookingTables; // Danh sách các bàn đặt
+
     public Booking() {
 
     }
 
-    public Booking(Integer id, LocalDateTime bookingTime, LocalDateTime expiryTime, String status, Integer userId) {
+    public Booking(Integer id) {
+        this.id = id;
+
+    }
+
+        public Booking(Integer id, LocalDateTime bookingTime, LocalDateTime expiryTime, String status, Integer userId, List<BookingTable> bookingTables) {
         this.id = id;
         this.bookingTime = bookingTime;
         this.expiryTime = expiryTime;
         this.status = status;
         this.userId = userId;
+        this.bookingTables = bookingTables;
     }
 
     public Integer getId() {
@@ -77,5 +90,13 @@ public class Booking {
 
     public void setUserId(Integer userId) {
         this.userId = userId;
+    }
+
+    public List<BookingTable> getBookingTables() {
+        return bookingTables;
+    }
+
+    public void setBookingTables(List<BookingTable> bookingTables) {
+        this.bookingTables = bookingTables;
     }
 }
