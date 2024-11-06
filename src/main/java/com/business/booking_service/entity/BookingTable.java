@@ -1,5 +1,6 @@
 package com.business.booking_service.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 import java.io.Serializable;
@@ -12,6 +13,7 @@ public class BookingTable implements Serializable {
     @ManyToOne
     @MapsId("bookingId")
     @JoinColumn(name = "booking_id")
+    @JsonBackReference
     private Booking booking;
 
     @Column(name = "table_id", insertable = false, updatable = false)

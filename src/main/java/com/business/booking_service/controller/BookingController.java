@@ -11,9 +11,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -48,13 +52,46 @@ public class BookingController {
 
     @PutMapping("/update/{id}/status")
     public ResponseEntity<String> updateBookingStatus(@PathVariable Integer id, @RequestBody BookingStatusUpdateRequest request) {
-        boolean isUpdated = bookingService.updateBookingStatus(id, request.getStatus());
+        // Lấy thông tin booking hiện tại
+        Optional<Booking> optionalCurrentBooking = bookingService.getBookingById(id);
+        if (!optionalCurrentBooking.isPresent()) {
+            return ResponseEntity.badRequest().body("Đơn đặt không tồn tại.");
+        }
+
+        Booking currentBooking = optionalCurrentBooking.get(); // Extract the Booking object
+
+        boolean isUpdated = bookingService.updateBookingStatus(id, request.getStatus(), currentBooking.getBookingTime());
         if (isUpdated) {
             return ResponseEntity.ok("Trạng thái đơn đặt đã được cập nhật thành công.");
         } else {
             return ResponseEntity.badRequest().body("Cập nhật trạng thái không thành công.");
         }
     }
+
+    @GetMapping("/history/{userId}")
+    public List<BookingResponseDTO> getUserBookingHistory(@PathVariable Integer userId) {
+        return bookingService.getUserBookingHistory(userId);
+    }
+
+    // API lấy số đơn trong ngày
+    @GetMapping("/orders/today")
+    public ResponseEntity<Map<String, Integer>> getOrdersToday(@RequestParam("date") String dateStr) {
+        LocalDate date = LocalDate.parse(dateStr);
+        int count = bookingService.getOrdersToday(date);
+        Map<String, Integer> response = new HashMap<>();
+        response.put("count", count);
+        return ResponseEntity.ok(response);
+    }
+
+//    @PutMapping("/update/{id}/status")
+//    public ResponseEntity<String> updateBookingAndTableStatus(@PathVariable Integer id, @RequestBody TableStatusUpdateRequest request) {
+//        boolean isUpdated = bookingService.updateTableStatusThroughBooking(id, request.getStatus());
+//        if (isUpdated) {
+//            return ResponseEntity.ok("Trạng thái bàn đã được cập nhật thành công.");
+//        } else {
+//            return ResponseEntity.badRequest().body("Cập nhật trạng thái bàn không thành công.");
+//        }
+//    }
 
 
 

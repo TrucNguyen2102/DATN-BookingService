@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,9 +34,12 @@ public class BookingServiceImpl implements BookingService{
         LocalDateTime bookingTime = bookingRequest.getBookingTime();
         booking.setBookingTime(bookingTime);
 
-        // Tính toán expiryTime
-        LocalDateTime expiryTime = bookingTime.plusMinutes(15);
-        booking.setExpiryTime(expiryTime); // Giả sử bạn đã có thuộc tính expiryTime trong thực thể Booking
+//        // Tính toán expiryTime
+//        LocalDateTime expiryTime = bookingTime.plusMinutes(15);
+//        booking.setExpiryTime(expiryTime); // Giả sử bạn đã có thuộc tính expiryTime trong thực thể Booking
+
+        // Đặt expiryTime là null khi tạo mới
+        booking.setExpiryTime(null); // Đặt expiryTime là null
 
         booking.setUserId(bookingRequest.getUserId());
         booking.setStatus("Chờ Xác Nhận"); // Gán giá trị cho status
@@ -96,11 +100,15 @@ public class BookingServiceImpl implements BookingService{
         }).collect(Collectors.toList());
     }
 
-    public boolean updateBookingStatus(Integer id, String status) {
+    public boolean updateBookingStatus(Integer id, String status, LocalDateTime bookingTime) {
+        // Tính toán thời gian hết hạn (expiryTime)
+        LocalDateTime expiryTime = bookingTime.plusMinutes(15);
+
         // Tìm kiếm booking theo id
         Optional<Booking> optionalBooking = bookingRepo.findById(id);
         if (optionalBooking.isPresent()) {
             Booking booking = optionalBooking.get();
+            booking.setExpiryTime(expiryTime); //cập nhật thời gian hết hạn
             booking.setStatus(status); // Cập nhật trạng thái
             bookingRepo.save(booking); // Lưu thay đổi
             return true;
@@ -112,5 +120,31 @@ public class BookingServiceImpl implements BookingService{
         return bookingRepo.findByStatus(status); // Tìm các booking theo trạng thái
     }
 
+    public List<BookingResponseDTO> getUserBookingHistory(Integer userId) {
+        List<Booking> bookings = bookingRepo.findByUserId(userId);
+        return bookings.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    private BookingResponseDTO convertToDto(Booking booking) {
+        BookingResponseDTO dto = new BookingResponseDTO();
+        dto.setId(booking.getId());
+        dto.setBookingTime(booking.getBookingTime());
+        dto.setExpiryTime(booking.getExpiryTime());
+        dto.setStatus(booking.getStatus());
+        dto.setUserId(booking.getUserId());
+        dto.setTableIdsFromBookingTables(booking.getBookingTables()); // Lấy danh sách ID bàn
+        return dto;
+    }
+
+    // Lấy số đơn trong ngày
+    public int getOrdersToday(LocalDate date) {
+        return bookingRepo.countOrdersToday(date);
+    }
+
+    public Optional<Booking> getBookingById(Integer id) {
+        return bookingRepo.findById(id);
+    }
 
 }

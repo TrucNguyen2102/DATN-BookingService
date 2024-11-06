@@ -16,7 +16,7 @@ public class Booking {
     private Integer id;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm")
-    @Column(name = "booking_time")
+    @Column(name = "booking_time", nullable = false)
     private LocalDateTime bookingTime;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm")
@@ -26,7 +26,7 @@ public class Booking {
     @Column(name = "status", length = 50, nullable = false)
     private String status;
 
-    @Column(name = "user_id")
+    @Column(name = "user_id", nullable = false)
     private Integer userId; //Khóa ngoại của User trong user-service
 
 

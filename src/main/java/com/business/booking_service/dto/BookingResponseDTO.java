@@ -1,9 +1,11 @@
 package com.business.booking_service.dto;
 
+import com.business.booking_service.entity.BookingTable;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class BookingResponseDTO {
     private Integer id;
@@ -63,5 +65,13 @@ public class BookingResponseDTO {
 
     public void setTableIds(List<Integer> tableIds) {
         this.tableIds = tableIds;
+    }
+
+    public void setTableIdsFromBookingTables(List<BookingTable> bookingTables) {
+        if (bookingTables != null) {
+            this.tableIds = bookingTables.stream()
+                    .map(BookingTable::getTableId)
+                    .collect(Collectors.toList());
+        }
     }
 }

@@ -6,7 +6,10 @@ import com.business.booking_service.dto.BookingResponseDTO;
 import com.business.booking_service.entity.Booking;
 import com.business.booking_service.entity.BookingTable;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface BookingService {
 
@@ -15,7 +18,13 @@ public interface BookingService {
 
     List<BookingResponseDTO> getAllBookings();
 
-    boolean updateBookingStatus(Integer id, String status);
+    boolean updateBookingStatus(Integer id, String status, LocalDateTime bookingTime);
 
     List<Booking> findByStatus(String status);
+
+    List<BookingResponseDTO> getUserBookingHistory(Integer userId);
+
+    int getOrdersToday(LocalDate date);
+
+    Optional<Booking> getBookingById(Integer id);
 }
