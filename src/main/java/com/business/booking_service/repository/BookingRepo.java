@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,4 +23,6 @@ public interface BookingRepo extends JpaRepository<Booking, Integer> {
 
     @Query("SELECT COUNT(b) FROM Booking b WHERE DATE(b.bookingTime) = :date")
     int countOrdersToday(@Param("date") LocalDate date);
+
+
 }
