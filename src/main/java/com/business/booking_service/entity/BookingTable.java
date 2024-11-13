@@ -16,7 +16,7 @@ public class BookingTable implements Serializable {
     @JsonBackReference
     private Booking booking;
 
-    @Column(name = "table_id", insertable = false, updatable = false)
+   @Column(name = "table_id", insertable = false, updatable = false)
     private Integer tableId; // Khóa ngoại của table từ table-service
 
 

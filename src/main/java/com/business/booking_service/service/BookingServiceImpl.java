@@ -9,6 +9,8 @@ import com.business.booking_service.repository.BookingRepo;
 import com.business.booking_service.repository.BookingTableRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -28,56 +30,6 @@ public class BookingServiceImpl implements BookingService{
     @Autowired
     private RestTemplate restTemplate; // Dùng để gửi HTTP request đến Table Service
 
-
-
-
-//    public void createBooking(BookingRequest bookingRequest) {
-//        // Tạo một booking mới
-//        Booking booking = new Booking();
-//        LocalDateTime bookingTime = bookingRequest.getBookingTime();
-//        booking.setBookingTime(bookingTime);
-//
-//        // Đặt expiryTime là null khi tạo mới
-//        booking.setExpiryTime(null); // Đặt expiryTime là null
-//
-//        booking.setUserId(bookingRequest.getUserId());
-//        booking.setStatus("Chờ Xác Nhận"); // Gán giá trị cho status
-//
-//        booking = bookingRepo.save(booking); // Lưu booking vào DB
-//
-//        // Lưu thông tin vào bảng booking_table
-//        List<Integer> tableIds = bookingRequest.getTableIds();
-//        if (tableIds == null || tableIds.isEmpty()) {
-//            throw new IllegalArgumentException("No table IDs provided");
-//        }
-//
-//        // Tạo danh sách BookingTable để gán cho Booking
-//        List<BookingTable> bookingTables = new ArrayList<>();
-//
-//        for (Integer tableId : tableIds) {
-//            BookingTable bookingTable = new BookingTable();
-//            BookingTableId bookingTableId = new BookingTableId();
-//            bookingTableId.setBookingId(booking.getId()); // Gán Booking ID
-//            bookingTableId.setTableId(tableId); // Gán Table ID
-//            bookingTable.setId(bookingTableId);
-//
-//            // Gán booking cho bookingTable
-//            bookingTable.setBooking(booking); // Thiết lập mối quan hệ giữa BookingTable và Booking
-//
-//            // Log thông tin trước khi lưu
-//            System.out.println("Saving BookingTable with Booking ID: " + booking.getId() + ", Table ID: " + tableId);
-//
-//            // Thêm bookingTable vào danh sách
-//            bookingTables.add(bookingTable);
-//        }
-//
-//        // Lưu tất cả các BookingTable cùng lúc
-//        try {
-//            bookingTableRepo.saveAll(bookingTables); // Lưu vào bảng booking_table
-//        } catch (Exception e) {
-//            System.err.println("Error saving booking tables. Error: " + e.getMessage());
-//        }
-//    }
 
     public void createBooking(BookingRequest bookingRequest) {
         LocalDateTime bookingTime = bookingRequest.getBookingTime();
@@ -143,28 +95,6 @@ public class BookingServiceImpl implements BookingService{
         }).collect(Collectors.toList());
     }
 
-//    public boolean updateBookingStatus(Integer id, String status, LocalDateTime bookingTime) {
-//        // Tính toán thời gian hết hạn (expiryTime)
-//        LocalDateTime expiryTime = bookingTime.plusMinutes(15);
-//
-//        // Tìm kiếm booking theo id
-//        Optional<Booking> optionalBooking = bookingRepo.findById(id);
-//        if (optionalBooking.isPresent()) {
-//            Booking booking = optionalBooking.get();
-//            booking.setExpiryTime(expiryTime); //cập nhật thời gian hết hạn
-//            booking.setStatus(status); // Cập nhật trạng thái
-//            bookingRepo.save(booking); // Lưu thay đổi
-//
-//            // Lấy danh sách table_id liên quan đến booking
-//            List<Integer> tableIds = bookingTableRepo.findTableIdsByBookingId(id);
-//
-//            // Gửi yêu cầu HTTP đến Table Service để cập nhật trạng thái bàn
-//            updateTableStatusInTableService(tableIds, status);
-//
-//            return true;
-//        }
-//        return false; // Nếu không tìm thấy booking
-//    }
 
     public boolean updateBookingStatus(Integer id, String status, LocalDateTime bookingTime) {
         // Tính toán thời gian hết hạn (expiryTime)
@@ -186,8 +116,12 @@ public class BookingServiceImpl implements BookingService{
         // Lấy danh sách table_id liên quan đến booking
         List<Integer> tableIds = bookingTableRepo.findTableIdsByBookingId(id);
 
-        // Gửi yêu cầu HTTP đến Table Service để cập nhật trạng thái bàn
-        return updateTableStatusInTableService(tableIds, status);
+
+        // Chỉ cập nhật trạng thái của bàn thành "Trống" nếu trạng thái booking là "Đã Thanh Toán"
+        if ("Đã Thanh Toán".equals(status)) {
+            updateTableStatusInTableService(tableIds, "Trống");
+        }
+        return true;
 
 
     }
@@ -229,11 +163,10 @@ public class BookingServiceImpl implements BookingService{
         return bookingRepo.findByStatus(status); // Tìm các booking theo trạng thái
     }
 
-    public List<BookingResponseDTO> getUserBookingHistory(Integer userId) {
-        List<Booking> bookings = bookingRepo.findByUserId(userId);
-        return bookings.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
+
+    public Page<BookingResponseDTO> getUserBookingHistory(Integer userId, Pageable pageable) {
+        return bookingRepo.findByUserId(userId, pageable)
+                .map(this::convertToDto); // Chuyển đổi mỗi Booking thành BookingResponseDTO
     }
 
     private BookingResponseDTO convertToDto(Booking booking) {

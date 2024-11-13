@@ -1,23 +1,41 @@
 package com.business.booking_service.controller;
 
+import com.business.booking_service.dto.UpdateTableRequest;
+import com.business.booking_service.entity.Booking;
 import com.business.booking_service.entity.BookingTable;
+import com.business.booking_service.entity.BookingTableId;
+import com.business.booking_service.exception.ResourceNotFoundException;
+import com.business.booking_service.repository.BookingRepo;
+import com.business.booking_service.repository.BookingTableRepo;
 import com.business.booking_service.service.BookingTableService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/bookings")
 public class BookingTableController {
     @Autowired
     private BookingTableService bookingTableService;
+    @Autowired
+    private BookingTableRepo bookingTableRepo;
+
+    @Autowired
+    private BookingRepo bookingRepo;
+
+
+
+//    public BookingTableController(BookingTableService bookingTableService, BookingTableRepo bookingTableRepo, BookingRepo bookingRepo, RestTemplate restTemplate, @Value("${tablePlayService}") String tablePlayServiceUrl) {
+//        this.bookingTableService = bookingTableService;
+//        this.bookingTableRepo = bookingTableRepo;
+//        this.bookingRepo = bookingRepo;
+//
+//    }
 
     @GetMapping("/booking_table/{bookingId}")
     public ResponseEntity<List<BookingTable>> getTablesByBookingId(@PathVariable Integer bookingId) {
@@ -41,4 +59,53 @@ public class BookingTableController {
         }
 
     }
+
+    @DeleteMapping("/booking_table/delete")
+    public ResponseEntity<String> deleteBookingTable(@RequestParam Integer bookingId, @RequestParam Integer tableId) {
+        try {
+            // Tạo BookingTableId từ bookingId và tableId
+            BookingTableId bookingTableId = new BookingTableId(bookingId, tableId);
+
+            // Kiểm tra xem bản ghi có tồn tại không
+            Optional<BookingTable> bookingTableOptional = bookingTableRepo.findById(bookingTableId);
+            if (bookingTableOptional.isPresent()) {
+                // Nếu bản ghi tồn tại, tiến hành xóa
+                bookingTableRepo.deleteById(bookingTableId);
+                return ResponseEntity.ok("Bàn đã được xóa khỏi đơn đặt bàn.");
+            } else {
+                // Nếu không tìm thấy bản ghi
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy bản ghi để xóa.");
+            }
+        } catch (Exception e) {
+            // Xử lý lỗi
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi khi xóa bản ghi.");
+        }
+    }
+
+
+    @PutMapping("/booking_table/update-table-id")
+    public ResponseEntity<String> updateBookingTable(@RequestBody UpdateTableRequest request) {
+        try {
+            return bookingTableService.updateBookingTable(request);
+        }catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }

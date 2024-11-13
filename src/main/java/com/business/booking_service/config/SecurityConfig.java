@@ -26,7 +26,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/bookings/history/{userId}").permitAll()
                         .requestMatchers("/api/bookings/booking_table/{bookingId}").permitAll()
                         .requestMatchers("/api/bookings/orders/today").permitAll()
+                        .requestMatchers("/api/bookings/orders/count-tables").permitAll()
                         .requestMatchers("/api/bookings/booking_table/most-booked-tables}").permitAll()
+                        .requestMatchers("/api/bookings/booking_table/delete").permitAll()
+                        .requestMatchers("/api/bookings/booking_table/update-table-id").permitAll()
                         .anyRequest().authenticated()
 
                 );

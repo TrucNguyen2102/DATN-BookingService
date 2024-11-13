@@ -10,4 +10,9 @@ public class AppConfig {
     public RestTemplate restTemplate() {
         return new RestTemplate();
     }
+
+    @Bean
+    public String tableServiceUrl() {
+        return "http://localhost:9092/api/tables/update-status";
+    }
 }

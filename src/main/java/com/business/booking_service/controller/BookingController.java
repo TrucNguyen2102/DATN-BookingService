@@ -4,9 +4,16 @@ import com.business.booking_service.dto.*;
 import com.business.booking_service.entity.Booking;
 import com.business.booking_service.entity.BookingTable;
 import com.business.booking_service.entity.BookingTableId;
+import com.business.booking_service.exception.ResourceNotFoundException;
+import com.business.booking_service.repository.BookingRepo;
+import com.business.booking_service.repository.BookingTableRepo;
 import com.business.booking_service.service.BookingService;
 import com.business.booking_service.service.BookingTableService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +32,12 @@ import java.util.Optional;
 public class BookingController {
     @Autowired
     private BookingService bookingService;
+
+    @Autowired
+    private BookingRepo bookingRepo;
+
+    @Autowired
+    private BookingTableRepo bookingTableRepo;
 
 
 
@@ -70,9 +83,18 @@ public class BookingController {
         }
     }
 
+//    @GetMapping("/history/{userId}")
+//    public List<BookingResponseDTO> getUserBookingHistory(@PathVariable Integer userId) {
+//        return bookingService.getUserBookingHistory(userId);
+//    }
     @GetMapping("/history/{userId}")
-    public List<BookingResponseDTO> getUserBookingHistory(@PathVariable Integer userId) {
-        return bookingService.getUserBookingHistory(userId);
+    public Page<BookingResponseDTO> getUserBookingHistory(
+            @PathVariable Integer userId,
+            @RequestParam(defaultValue = "0") int page,  // Trang mặc định là 0
+            @RequestParam(defaultValue = "5") int size   // Số bản ghi mỗi trang là 5
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return bookingService.getUserBookingHistory(userId, pageable);
     }
 
     // API lấy số đơn trong ngày
@@ -94,6 +116,33 @@ public class BookingController {
 //            return ResponseEntity.badRequest().body("Cập nhật trạng thái bàn không thành công.");
 //        }
 //    }
+
+//    @PutMapping("/update/{id}")
+//    public ResponseEntity<String> updateBooking(@PathVariable Integer id, @RequestBody Map<String, Object> request) {
+//        try {
+//
+//        }catch (Exception e) {
+//            e.printStackTrace();
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+//        }
+//    }
+
+
+    @GetMapping("/orders/count-tables")
+    public ResponseEntity<?> countTablesByDate(@RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        try {
+            int count = bookingRepo.countTablesByDate(date);
+            return ResponseEntity.ok(Map.of("count", count));
+        }catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+
+    }
+
+
+
+
 
 
 

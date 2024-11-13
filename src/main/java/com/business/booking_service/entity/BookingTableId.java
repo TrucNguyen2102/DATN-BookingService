@@ -60,4 +60,10 @@ public class BookingTableId implements Serializable {
     public int hashCode() {
         return Objects.hash(bookingId, tableId);
     }
+
+    @Override
+    public String toString() {
+        return "BookingTableId [bookingId=" + bookingId + ", tableId=" + tableId + "]";
+
+    }
 }

@@ -5,6 +5,8 @@ import com.business.booking_service.dto.BookingRequest;
 import com.business.booking_service.dto.BookingResponseDTO;
 import com.business.booking_service.entity.Booking;
 import com.business.booking_service.entity.BookingTable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -12,7 +14,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface BookingService {
-
 
     void createBooking(BookingRequest bookingRequest);
 
@@ -22,7 +23,7 @@ public interface BookingService {
 
     List<Booking> findByStatus(String status);
 
-    List<BookingResponseDTO> getUserBookingHistory(Integer userId);
+Page<BookingResponseDTO> getUserBookingHistory(Integer userId, Pageable pageable);
 
     int getOrdersToday(LocalDate date);
 
