@@ -44,13 +44,6 @@ public class BookingTableServiceImpl implements BookingTableService{
         this.tablePlayServiceUrl = tablePlayServiceUrl;
     }
 
-    //    public BookingTableServiceImpl(BookingTableRepo bookingTableRepo, RestTemplate restTemplate,
-//                                   @Value("${tablePlayService}") String tablePlayServiceUrl) {
-//        this.bookingTableRepo = bookingTableRepo;
-//        this.restTemplate = restTemplate;
-//        this.tablePlayServiceUrl = tablePlayServiceUrl;
-//    }
-
     //lấy ds bàn theo bookingId trong BookingTable
     public List<BookingTable> getTablesByBookingId(Integer bookingId) {
         return bookingTableRepo.findByBookingId(bookingId);
@@ -169,51 +162,5 @@ public class BookingTableServiceImpl implements BookingTableService{
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi khi cập nhật thông tin booking: " + e.getMessage());
         }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//    public ResponseEntity<String> updateBookingTable(UpdateTableRequest request) {
-//        try {
-//            // Lấy thông tin booking từ request
-//            BookingTable bookingTable = bookingTableRepo.getByBookingId(request.getBookingId())
-//                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy booking"));
-//
-//            // Kiểm tra và cập nhật trạng thái bàn cũ thành 'Trống'
-//            if (request.getOldTableId() != null) {
-//                // Cập nhật bàn cũ thành 'Trống'
-//                restTemplate.put(tablePlayServiceUrl, new UpdateTableRequest(request.getOldTableId(), "Trống"));
-//            }
-//
-//            // Cập nhật tableId trong BookingTable
-//            bookingTableRepo.updateTableId(request.getBookingId(), request.getNewTableId()); // Cập nhật tableId mới cho BookingTable
-//
-//            // Cập nhật trạng thái bàn mới thành 'Đã Đặt'
-//            restTemplate.put(tablePlayServiceUrl, new UpdateTableRequest(request.getNewTableId(), "Đã Đặt"));
-//
-//            return ResponseEntity.ok("Cập nhật bàn cho booking thành công!");
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi khi cập nhật thông tin booking.");
-//        }
-//    }
-
-
-
 
 }
