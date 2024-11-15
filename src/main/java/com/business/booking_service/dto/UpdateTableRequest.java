@@ -4,13 +4,16 @@ public class UpdateTableRequest {
     private Integer bookingId;
 
     private Integer tableId;
+
     private String status;
 
     public UpdateTableRequest() {
 
     }
 
-    public UpdateTableRequest(Integer bookingId, Integer tableId, String status) {
+
+
+        public UpdateTableRequest(Integer bookingId, Integer tableId, String status) {
         this.bookingId = bookingId;
         this.tableId = tableId;
         this.status = status;

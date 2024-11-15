@@ -1,6 +1,7 @@
 package com.business.booking_service.controller;
 
 import com.business.booking_service.dto.UpdateTableRequest;
+import com.business.booking_service.dto.UpdateTablesRequest;
 import com.business.booking_service.entity.Booking;
 import com.business.booking_service.entity.BookingTable;
 import com.business.booking_service.entity.BookingTableId;
@@ -11,7 +12,6 @@ import com.business.booking_service.service.BookingTableService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -28,14 +28,22 @@ public class BookingTableController {
     @Autowired
     private BookingRepo bookingRepo;
 
+    @Autowired
+    private RestTemplate restTemplate; // Inject RestTemplate
+
+    @Autowired
+    @Value("${tablePlayService_url}")  // Lấy URL từ application.properties
+    private String tablePlayServiceUrl; // Địa chỉ URL của TablePlay Service
 
 
-//    public BookingTableController(BookingTableService bookingTableService, BookingTableRepo bookingTableRepo, BookingRepo bookingRepo, RestTemplate restTemplate, @Value("${tablePlayService}") String tablePlayServiceUrl) {
-//        this.bookingTableService = bookingTableService;
-//        this.bookingTableRepo = bookingTableRepo;
-//        this.bookingRepo = bookingRepo;
-//
-//    }
+
+    public BookingTableController(BookingTableService bookingTableService, BookingTableRepo bookingTableRepo, BookingRepo bookingRepo, RestTemplate restTemplate, @Value("${tablePlayService_url}")  String tablePlayServiceUrl) {
+        this.bookingTableService = bookingTableService;
+        this.bookingTableRepo = bookingTableRepo;
+        this.bookingRepo = bookingRepo;
+        this.restTemplate = restTemplate;
+        this.tablePlayServiceUrl = tablePlayServiceUrl;
+    }
 
     @GetMapping("/booking_table/{bookingId}")
     public ResponseEntity<List<BookingTable>> getTablesByBookingId(@PathVariable Integer bookingId) {
@@ -95,17 +103,14 @@ public class BookingTableController {
 
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
+    @PutMapping("/booking_table/update-tables")
+    public ResponseEntity<String> updateBookingTables(@RequestBody UpdateTablesRequest request) {
+        try {
+            return bookingTableService.updateBookingTables(request);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi khi cập nhật thông tin booking.");
+        }
+    }
 
 }

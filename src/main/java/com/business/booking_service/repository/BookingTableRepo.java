@@ -35,13 +35,19 @@ public interface BookingTableRepo extends JpaRepository<BookingTable, BookingTab
 
     boolean existsByTableIdAndBooking_Status(Integer tableId, String status);
 
-    Optional<BookingTable> findByBookingIdAndTableId(Integer bookingId, Integer tableId);
+    BookingTable findByBookingIdAndTableId(Integer bookingId, Integer tableId);
 
     // Tìm kiếm với khóa composite BookingTableId
     Optional<BookingTable> findById(BookingTableId id);
+
 
     @Modifying
     @Query("UPDATE BookingTable bt SET bt.id.tableId = :tableId WHERE bt.id.bookingId = :bookingId")
     void updateTableId(@Param("bookingId") Integer bookingId, @Param("tableId") Integer tableId);
 
+    @Modifying
+    @Query("UPDATE BookingTable bt SET bt.tableId = :newTableId WHERE bt.id.bookingId = :bookingId AND bt.id.tableId = :oldTableId")
+    void updateTableIds(@Param("bookingId") Integer bookingId,
+                       @Param("oldTableId") Integer oldTableId,
+                       @Param("newTableId") Integer newTableId);
 }

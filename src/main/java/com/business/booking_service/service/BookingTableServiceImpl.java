@@ -1,8 +1,10 @@
 package com.business.booking_service.service;
 
 import com.business.booking_service.dto.UpdateTableRequest;
+import com.business.booking_service.dto.UpdateTablesRequest;
 import com.business.booking_service.entity.Booking;
 import com.business.booking_service.entity.BookingTable;
+import com.business.booking_service.entity.BookingTableId;
 import com.business.booking_service.exception.ResourceNotFoundException;
 import com.business.booking_service.repository.BookingRepo;
 import com.business.booking_service.repository.BookingTableRepo;
@@ -18,6 +20,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class BookingTableServiceImpl implements BookingTableService{
@@ -34,13 +37,19 @@ public class BookingTableServiceImpl implements BookingTableService{
     @Value("${tablePlayService}")  // Lấy URL từ application.properties
     private String tablePlayServiceUrl; // Địa chỉ URL của TablePlay Service
 
-
-    public BookingTableServiceImpl(BookingTableRepo bookingTableRepo, RestTemplate restTemplate,
-                                   @Value("${tablePlayService}") String tablePlayServiceUrl) {
+    public BookingTableServiceImpl(BookingTableRepo bookingTableRepo, BookingRepo bookingRepo, RestTemplate restTemplate, @Value("${tablePlayService}") String tablePlayServiceUrl) {
         this.bookingTableRepo = bookingTableRepo;
+        this.bookingRepo = bookingRepo;
         this.restTemplate = restTemplate;
         this.tablePlayServiceUrl = tablePlayServiceUrl;
     }
+
+    //    public BookingTableServiceImpl(BookingTableRepo bookingTableRepo, RestTemplate restTemplate,
+//                                   @Value("${tablePlayService}") String tablePlayServiceUrl) {
+//        this.bookingTableRepo = bookingTableRepo;
+//        this.restTemplate = restTemplate;
+//        this.tablePlayServiceUrl = tablePlayServiceUrl;
+//    }
 
     //lấy ds bàn theo bookingId trong BookingTable
     public List<BookingTable> getTablesByBookingId(Integer bookingId) {
@@ -73,7 +82,7 @@ public class BookingTableServiceImpl implements BookingTableService{
     }
 
 
-    //update tableId thành mới khi chuyển bàn
+    //update tableId thành mới khi chuyển bàn (1 bàn)
     @Transactional
     public ResponseEntity<String> updateBookingTable(UpdateTableRequest request) {
         try {
@@ -99,6 +108,112 @@ public class BookingTableServiceImpl implements BookingTableService{
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi khi cập nhật thông tin booking.");
         }
     }
+
+
+    //nhiều bàn
+    @Transactional
+    public ResponseEntity<String> updateBookingTables(UpdateTablesRequest request) {
+        try {
+            // Kiểm tra dữ liệu đầu vào
+            if (request.getBookingId() == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Booking ID không được để trống.");
+            }
+            if (request.getNewTableIds() == null || request.getNewTableIds().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Danh sách bàn mới không được để trống.");
+            }
+
+            // Kiểm tra tính đồng bộ của oldTableIds và newTableIds
+            if (request.getOldTableIds().size() != request.getNewTableIds().size()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Số lượng bàn cũ và bàn mới không khớp.");
+            }
+
+            // Duyệt qua từng bàn cũ và cập nhật với bàn mới tương ứng
+            for (int i = 0; i < request.getOldTableIds().size(); i++) {
+                Integer oldTableId = request.getOldTableIds().get(i);
+                Integer newTableId = request.getNewTableIds().get(i);
+
+                // Lấy bản ghi bàn cũ trong bảng BookingTable
+                BookingTable bookingTable = bookingTableRepo.findByBookingIdAndTableId(
+                        request.getBookingId(), oldTableId);
+
+                if (bookingTable != null) {
+                    // Cập nhật trạng thái của bàn cũ thành "Trống"
+                    UpdateTableRequest updateOldTableRequest = new UpdateTableRequest(oldTableId, "Trống");
+                    restTemplate.put(tablePlayServiceUrl, updateOldTableRequest);
+
+                    // Cập nhật `tableId` của bàn mới vào bản ghi của bàn cũ
+                    System.out.println("Trước khi cập nhật: " + bookingTable.getTableId());
+                    bookingTable.setTableId(newTableId);
+//                    bookingTableRepo.save(bookingTable);
+
+
+                    // Cập nhật trạng thái của bàn mới thành "Đã Đặt"
+                    UpdateTableRequest updateNewTableRequest = new UpdateTableRequest(newTableId, "Đã Đặt");
+                    restTemplate.put(tablePlayServiceUrl, updateNewTableRequest);
+                    // Cập nhật vào database bằng phương thức update trong repository
+                    bookingTableRepo.updateTableIds(request.getBookingId(), oldTableId, newTableId);
+                    System.out.println("Sau khi cập nhật: " + bookingTable.getTableId());
+                } else {
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy bản ghi của bàn cũ.");
+                }
+            }
+
+            // Trả về kết quả thành công
+            return ResponseEntity.ok("Cập nhật bàn cho booking thành công!");
+
+        } catch (ResourceNotFoundException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi khi cập nhật thông tin booking: " + e.getMessage());
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//    public ResponseEntity<String> updateBookingTable(UpdateTableRequest request) {
+//        try {
+//            // Lấy thông tin booking từ request
+//            BookingTable bookingTable = bookingTableRepo.getByBookingId(request.getBookingId())
+//                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy booking"));
+//
+//            // Kiểm tra và cập nhật trạng thái bàn cũ thành 'Trống'
+//            if (request.getOldTableId() != null) {
+//                // Cập nhật bàn cũ thành 'Trống'
+//                restTemplate.put(tablePlayServiceUrl, new UpdateTableRequest(request.getOldTableId(), "Trống"));
+//            }
+//
+//            // Cập nhật tableId trong BookingTable
+//            bookingTableRepo.updateTableId(request.getBookingId(), request.getNewTableId()); // Cập nhật tableId mới cho BookingTable
+//
+//            // Cập nhật trạng thái bàn mới thành 'Đã Đặt'
+//            restTemplate.put(tablePlayServiceUrl, new UpdateTableRequest(request.getNewTableId(), "Đã Đặt"));
+//
+//            return ResponseEntity.ok("Cập nhật bàn cho booking thành công!");
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi khi cập nhật thông tin booking.");
+//        }
+//    }
+
+
 
 
 }
