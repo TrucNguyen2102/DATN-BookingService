@@ -16,6 +16,11 @@ import java.util.Optional;
 @Repository
 public interface BookingTableRepo extends JpaRepository<BookingTable, BookingTableId> {
     List<BookingTable> findByBookingId(Integer bookingId);
+
+    // Custom query để tìm theo bookingId
+//    @Query("SELECT b FROM BookingTable b WHERE b.id.bookingId = :bookingId")
+//    List<BookingTable> findTableIdByBookingId(@Param("bookingId") Integer bookingId);
+
     Optional<BookingTable> getByBookingId(Integer bookingId);
 
 

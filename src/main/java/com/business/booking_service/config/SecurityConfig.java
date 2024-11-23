@@ -22,7 +22,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/bookings/add").permitAll()
                         .requestMatchers("/api/bookings/all").permitAll()
+                        .requestMatchers("/api/bookings/{id}").permitAll()
                         .requestMatchers("/api/bookings/update/{id}/status").permitAll()
+                        .requestMatchers("/api/bookings/booking_table/update/{bookingId}/status").permitAll()
+                        .requestMatchers("/api/bookings/booking_table/update/{bookingId}/status/paymentProcessing").permitAll()
                         .requestMatchers("/api/bookings/history/{userId}").permitAll()
                         .requestMatchers("/api/bookings/booking_table/{bookingId}").permitAll()
                         .requestMatchers("/api/bookings/orders/today").permitAll()
@@ -31,6 +34,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/bookings/booking_table/delete").permitAll()
                         .requestMatchers("/api/bookings/booking_table/update-table-id").permitAll()
                         .requestMatchers("/api/bookings/booking_table/update-tables").permitAll()
+                        .requestMatchers("/api/bookings/booking_table/{bookingId}/tables").permitAll()
+
+                        .requestMatchers("/api/bookings/bookingTables/{bookingId}").permitAll()
                         .anyRequest().authenticated()
 
                 );

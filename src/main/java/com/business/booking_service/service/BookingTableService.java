@@ -25,4 +25,8 @@ public interface BookingTableService {
    ResponseEntity<String> updateBookingTables(UpdateTablesRequest request);
 
 
+   List<Integer> getTableIdsByBookingId(Integer bookingId);
+
+
+
 }

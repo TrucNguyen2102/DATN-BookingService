@@ -30,6 +30,15 @@ public class BookingServiceImpl implements BookingService{
     @Autowired
     private RestTemplate restTemplate; // Dùng để gửi HTTP request đến Table Service
 
+    @Value("${tablePlayService_url}")
+    private String TABLE_SERVICE_URL;
+
+    public BookingServiceImpl(BookingRepo bookingRepo, BookingTableRepo bookingTableRepo, RestTemplate restTemplate, @Value("${tablePlayService_url}") String TABLE_SERVICE_URL) {
+        this.bookingRepo = bookingRepo;
+        this.bookingTableRepo = bookingTableRepo;
+        this.restTemplate = restTemplate;
+        this.TABLE_SERVICE_URL = TABLE_SERVICE_URL;
+    }
 
     public void createBooking(BookingRequest bookingRequest) {
         LocalDateTime bookingTime = bookingRequest.getBookingTime();
@@ -187,6 +196,57 @@ public class BookingServiceImpl implements BookingService{
 
     public Optional<Booking> getBookingById(Integer id) {
         return bookingRepo.findById(id);
+    }
+
+
+    // Kiểm tra tất cả bàn thuộc bookingId có trạng thái "Trống" không
+    // Kiểm tra tất cả bàn thuộc bookingId có trạng thái "Trống" không
+    public boolean checkAllTablesAreEmpty(Integer bookingId) {
+        // Lấy tất cả các BookingTable thuộc bookingId
+        List<BookingTable> bookingTables = bookingTableRepo.findByBookingId(bookingId);
+
+        // Kiểm tra trạng thái bàn "Trống" qua API của Table Service
+        for (BookingTable bookingTable : bookingTables) {
+            Integer tableId = bookingTable.getTableId();  // Lấy tableId từ BookingTable
+            String url = TABLE_SERVICE_URL + "/" + tableId + "/status";  // Gọi API của Table Service
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, null, String.class);
+
+            // Nếu bàn có trạng thái khác "Trống", trả về false
+            if (!"Trống".equals(response.getBody())) {
+                return false;
+            }
+        }
+        return true;  // Nếu tất cả bàn đều "Trống", trả về true
+    }
+
+    public boolean checkAllTablesArePaymentProcessing(Integer bookingId) {
+        // Lấy tất cả các BookingTable thuộc bookingId
+        List<BookingTable> bookingTables = bookingTableRepo.findByBookingId(bookingId);
+
+        // Kiểm tra trạng thái bàn "Trống" qua API của Table Service
+        for (BookingTable bookingTable : bookingTables) {
+            Integer tableId = bookingTable.getTableId();  // Lấy tableId từ BookingTable
+            String url = TABLE_SERVICE_URL + "/" + tableId + "/status";  // Gọi API của Table Service
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, null, String.class);
+            System.out.println("Bàn ID: " + tableId + " - Trạng thái từ API: " + response.getBody());
+            // Nếu bàn có trạng thái khác "Đang Xử Lý Thanh Toán", trả về false
+            if (!"Đang Xử Lý Thanh Toán".equals(response.getBody())) {
+                return false;
+            }
+        }
+        return true;  // Nếu tất cả bàn đều "Trống", trả về true
+    }
+
+    // Cập nhật trạng thái booking thành "Đã Thanh Toán"
+    public void updateBookingStatus(Integer bookingId, String status) {
+        Optional<Booking> bookingOptional = bookingRepo.findById(bookingId);
+        if (bookingOptional.isPresent()) {
+            Booking booking = bookingOptional.get();
+            System.out.println("Trạng thái trước khi cập nhật: " + booking.getStatus());
+            booking.setStatus(status);
+            bookingRepo.save(booking);
+            System.out.println("Đã cập nhật trạng thái bookingId " + bookingId + " thành: " + status);
+        }
     }
 
 

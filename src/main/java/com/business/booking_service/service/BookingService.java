@@ -28,4 +28,9 @@ Page<BookingResponseDTO> getUserBookingHistory(Integer userId, Pageable pageable
     int getOrdersToday(LocalDate date);
 
     Optional<Booking> getBookingById(Integer id);
+
+    boolean checkAllTablesAreEmpty(Integer bookingId);
+    boolean checkAllTablesArePaymentProcessing(Integer bookingId);
+
+    void updateBookingStatus(Integer bookingId, String status);
 }

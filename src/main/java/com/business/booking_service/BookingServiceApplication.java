@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.business.booking_service")
 @EnableScheduling
 //@EnableFeignClients // Kích hoạt Feign Clients
 public class BookingServiceApplication {

@@ -19,8 +19,10 @@ import org.springframework.web.client.RestTemplate;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class BookingTableServiceImpl implements BookingTableService{
@@ -162,5 +164,39 @@ public class BookingTableServiceImpl implements BookingTableService{
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi khi cập nhật thông tin booking: " + e.getMessage());
         }
     }
+
+    public List<Integer> getTableIdsByBookingId(Integer bookingId) {
+        try {
+            return bookingTableRepo.findTableIdsByBookingId(bookingId);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error fetching table IDs by bookingId", e);
+        }
+    }
+
+
+//    public List<BookingTable> getTableIdByBookingId(Integer bookingId) {
+//        return bookingTableRepo.findTableIdByBookingId(bookingId);
+//    }
+
+
+
+
+//    public List<Integer> getTableIdsByBookingId(Integer bookingId) {
+//        try {
+//            // Giả sử bạn đang thực hiện truy vấn trong cơ sở dữ liệu
+//            // Kiểm tra nếu bookingId không hợp lệ hoặc không tìm thấy dữ liệu
+//            List<Integer> tableIds = bookingTableRepo.findTableIdsByBookingId(bookingId);
+//            return tableIds != null ? tableIds : new ArrayList<>(); // Trả về danh sách trống nếu không có dữ liệu
+//        } catch (Exception e) {
+//            e.printStackTrace();  // Log chi tiết lỗi nếu có
+//            throw new RuntimeException("Error fetching table IDs", e); // Ném lỗi lên
+//        }
+//    }
+
+
+
+
+
 
 }
