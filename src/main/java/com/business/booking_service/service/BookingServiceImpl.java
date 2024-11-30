@@ -2,6 +2,7 @@ package com.business.booking_service.service;
 
 import com.business.booking_service.dto.BookingRequest;
 import com.business.booking_service.dto.BookingResponseDTO;
+import com.business.booking_service.dto.UserDTO;
 import com.business.booking_service.entity.Booking;
 import com.business.booking_service.entity.BookingTable;
 import com.business.booking_service.entity.BookingTableId;
@@ -9,6 +10,7 @@ import com.business.booking_service.repository.BookingRepo;
 import com.business.booking_service.repository.BookingTableRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
@@ -33,11 +35,15 @@ public class BookingServiceImpl implements BookingService{
     @Value("${tablePlayService_url}")
     private String TABLE_SERVICE_URL;
 
-    public BookingServiceImpl(BookingRepo bookingRepo, BookingTableRepo bookingTableRepo, RestTemplate restTemplate, @Value("${tablePlayService_url}") String TABLE_SERVICE_URL) {
+    @Value("${userService_url}")
+    private String USER_SERVICE_URL;
+
+    public BookingServiceImpl(BookingRepo bookingRepo, BookingTableRepo bookingTableRepo, RestTemplate restTemplate, @Value("${tablePlayService_url}") String TABLE_SERVICE_URL, @Value("${userService_url}") String USER_SERVICE_URL) {
         this.bookingRepo = bookingRepo;
         this.bookingTableRepo = bookingTableRepo;
         this.restTemplate = restTemplate;
         this.TABLE_SERVICE_URL = TABLE_SERVICE_URL;
+        this.USER_SERVICE_URL = USER_SERVICE_URL;
     }
 
     public void createBooking(BookingRequest bookingRequest) {
@@ -103,6 +109,41 @@ public class BookingServiceImpl implements BookingService{
             return dto;
         }).collect(Collectors.toList());
     }
+
+    public List<Booking> searchBookings(String fullName, String phone, String status) {
+        // URL của API User Service
+        String url = USER_SERVICE_URL + "/search?fullName=" + fullName + "&phone=" + phone;
+
+        // Gửi yêu cầu tới User Service
+        ResponseEntity<List<UserDTO>> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<UserDTO>>() {});
+
+        List<UserDTO> userDTOs = response.getBody();
+        // In kết quả trả về để kiểm tra
+        System.out.println("UserDTOs: " + userDTOs);
+
+        // Lấy danh sách userId từ UserDTO
+        List<Integer> userIds = userDTOs.stream()
+                .map(UserDTO::getId)
+                .collect(Collectors.toList());
+        // In danh sách userIds ra để kiểm tra
+        System.out.println("User IDs: " + userIds);
+
+        // Tìm các Booking theo userId và trạng thái
+//        return bookingRepo.findByUserIdInAndStatus(userIds, status);
+
+        // Tìm các Booking theo userIds và status
+        List<Booking> bookings = bookingRepo.findByUserIdInAndStatus(userIds, status);
+
+// In ra danh sách booking tìm được
+        System.out.println("Bookings tìm được: " + bookings);
+        return bookings;
+
+    }
+
 
 
     public boolean updateBookingStatus(Integer id, String status, LocalDateTime bookingTime) {

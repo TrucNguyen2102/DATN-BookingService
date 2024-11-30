@@ -14,8 +14,7 @@ public interface BookingTableService {
    List<BookingTable> getTablesByBookingId(Integer bookingId);
 
 
-
-   List<Object[]> getMostBookedTables();
+   List<Object[]> getMostBookedTables(java.sql.Date date);
 
 
    boolean checkTableConflict(Integer tableId, LocalDateTime requestedBookingTime, LocalDateTime requestedExpiryTime);

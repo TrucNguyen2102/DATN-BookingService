@@ -19,6 +19,8 @@ public interface BookingService {
 
     List<BookingResponseDTO> getAllBookings();
 
+    List<Booking> searchBookings(String fullName, String phone, String status);
+
     boolean updateBookingStatus(Integer id, String status, LocalDateTime bookingTime);
 
     List<Booking> findByStatus(String status);

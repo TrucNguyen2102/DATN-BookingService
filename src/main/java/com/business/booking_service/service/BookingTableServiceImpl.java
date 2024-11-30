@@ -51,9 +51,12 @@ public class BookingTableServiceImpl implements BookingTableService{
         return bookingTableRepo.findByBookingId(bookingId);
     }
 
-    public List<Object[]> getMostBookedTables() {
-        return bookingTableRepo.findMostBookedTables();
+
+    public List<Object[]> getMostBookedTables(java.sql.Date date) {
+        return bookingTableRepo.findMostBookedTables(date);
     }
+
+
 
     //kiểm tra xung đột bàn
     public boolean checkTableConflict(Integer tableId, LocalDateTime requestedBookingTime, LocalDateTime requestedExpiryTime) {

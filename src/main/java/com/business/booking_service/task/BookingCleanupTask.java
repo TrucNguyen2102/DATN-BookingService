@@ -52,15 +52,6 @@ public class BookingCleanupTask {
 
             }
 
-//            // Lấy `BookingTable` theo `bookingId` để lấy `tableId`
-//            BookingTable bookingTable = bookingTableRepo.getByBookingId(booking.getId())
-//                    .orElseThrow(() -> new RuntimeException("Không tìm thấy BookingTable cho bookingId: " + booking.getId()));
-//
-//            Integer tableId = bookingTable.getId().getTableId();
-//
-//            // Gửi yêu cầu PUT để cập nhật trạng thái của bàn thành "Trống"
-//            UpdateTableRequest updateRequest = new UpdateTableRequest(tableId, "Trống");
-//            restTemplate.put(tablePlayServiceUrl, updateRequest);
         }
     }
 }

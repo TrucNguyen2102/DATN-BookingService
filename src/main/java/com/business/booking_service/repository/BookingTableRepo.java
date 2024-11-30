@@ -24,11 +24,11 @@ public interface BookingTableRepo extends JpaRepository<BookingTable, BookingTab
     Optional<BookingTable> getByBookingId(Integer bookingId);
 
 
-    @Query("SELECT bt.tableId, COUNT(bt.tableId) AS count " +
-            "FROM BookingTable bt " +
-            "GROUP BY bt.tableId " +
-            "ORDER BY count DESC")
-    List<Object[]> findMostBookedTables();
+
+    @Query("SELECT bt.tableId, COUNT(bt) FROM BookingTable bt WHERE DATE(bt.booking.bookingTime) = :date GROUP BY bt.tableId ORDER BY COUNT(bt) DESC")
+    List<Object[]> findMostBookedTables(@Param("date") java.sql.Date date);
+
+
 
 
     @Query("SELECT b.id.tableId FROM BookingTable b WHERE b.id.bookingId = :bookingId")

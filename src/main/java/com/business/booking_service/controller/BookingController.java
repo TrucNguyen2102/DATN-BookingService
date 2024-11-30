@@ -20,6 +20,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -97,6 +99,25 @@ public class BookingController {
         }
 
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Booking>> searchBookings(
+            @RequestParam(required = false) String fullName,
+            @RequestParam(required = false) String phone,
+            @RequestParam(required = false) String status) {
+        try {
+            // Log tham số nhận được từ frontend
+            System.out.println("Tìm kiếm với tên: " + fullName + ", phone: " + phone + ", status: " + status);
+
+            List<Booking> bookings = bookingService.searchBookings(fullName, phone, status);
+            System.out.println("Bookings tìm được: " + bookings);
+            return ResponseEntity.ok(bookings);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
 
     @PutMapping("/update/{id}/status")
     public ResponseEntity<String> updateBookingStatus(@PathVariable Integer id, @RequestBody BookingStatusUpdateRequest request) {
@@ -346,17 +367,41 @@ public class BookingController {
 
     // Endpoint để lấy số bàn được đặt nhiều nhất
     @GetMapping("/booking_table/most-booked-tables")
-    public ResponseEntity<List<Object[]>> getMostBookedTables() {
+    public ResponseEntity<?> getMostBookedTables(@RequestParam("date") String date) {
         try {
-            List<Object[]> mostBookedTables = bookingTableService.getMostBookedTables();
-            System.out.println("Most booked tables: " + Arrays.deepToString(mostBookedTables.toArray()));
-            return ResponseEntity.ok(mostBookedTables);
-        }catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-        }
+            // Chuyển đổi String -> java.sql.Date
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            java.util.Date parsedDate = sdf.parse(date);
+            java.sql.Date sqlDate = new java.sql.Date(parsedDate.getTime());
 
+            List<Object[]> mostBookedTables = bookingTableService.getMostBookedTables(sqlDate);
+
+            if (mostBookedTables == null || mostBookedTables.isEmpty()) {
+                return ResponseEntity.ok(Collections.singletonMap("message", "No bookings found for the specified date."));
+            }
+
+            // Tìm số lần đặt cao nhất
+            Long maxBookingCount = mostBookedTables.stream()
+                    .map(row -> (Long) row[1])
+                    .max(Long::compareTo)
+                    .orElse(0L);
+
+            // Lọc danh sách các bàn có số lần đặt cao nhất
+            List<Map<String, Object>> result = mostBookedTables.stream()
+                    .filter(row -> ((Long) row[1]).equals(maxBookingCount))
+                    .map(row -> Map.of("tableId", row[0], "bookingCount", row[1]))
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(result);
+
+        } catch (ParseException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid date format. Please use 'yyyy-MM-dd'.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while fetching data.");
+        }
     }
+
 
     @DeleteMapping("/booking_table/delete")
     public ResponseEntity<String> deleteBookingTable(@RequestParam Integer bookingId, @RequestParam Integer tableId) {
@@ -464,6 +509,25 @@ public class BookingController {
 //            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
 //        }
 //    }
+
+
+    // API để lấy danh sách tableId từ bookingId
+    @GetMapping("/{bookingId}/tables")
+    public ResponseEntity<List<Integer>> getTableIdByBookingId(@PathVariable Integer bookingId) {
+
+        List<BookingTable> bookingTables = bookingTableRepo.findByBookingId(bookingId);
+
+        if (bookingTables.isEmpty()) {
+            return ResponseEntity.noContent().build(); // Không có bàn nào liên kết với booking
+        }
+
+        // Trích xuất danh sách tableId từ các bản ghi BookingTable
+        List<Integer> tableIds = bookingTables.stream()
+                .map(BookingTable::getTableId)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(tableIds); // Trả về danh sách tableId
+    }
 
 
 

@@ -27,6 +27,11 @@ public interface BookingRepo extends JpaRepository<Booking, Integer> {
     @Query("SELECT COUNT(b) FROM Booking b WHERE DATE(b.bookingTime) = :date")
     int countOrdersToday(@Param("date") LocalDate date);
 
-    @Query("SELECT COUNT(b) FROM Booking b WHERE DATE(b.bookingTime) = :date")
+//    @Query("SELECT COUNT(b) FROM Booking b WHERE DATE(b.bookingTime) = :date")
+//    int countTablesByDate(@Param("date") LocalDate date);
+    @Query("SELECT COUNT(bt) FROM BookingTable bt JOIN bt.booking b WHERE DATE(b.bookingTime) = :date")
     int countTablesByDate(@Param("date") LocalDate date);
+
+    // Tìm các Booking theo danh sách userId và trạng thái
+    List<Booking> findByUserIdInAndStatus(List<Integer> userIds, String status);
 }
