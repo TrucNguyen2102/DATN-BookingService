@@ -2,6 +2,7 @@ package com.business.booking_service.service;
 
 import com.business.booking_service.dto.BookingRequest;
 import com.business.booking_service.dto.BookingResponseDTO;
+import com.business.booking_service.dto.NotificationDTO;
 import com.business.booking_service.dto.UserDTO;
 import com.business.booking_service.entity.Booking;
 import com.business.booking_service.entity.BookingTable;
@@ -19,6 +20,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,18 +34,25 @@ public class BookingServiceImpl implements BookingService{
     @Autowired
     private RestTemplate restTemplate; // Dùng để gửi HTTP request đến Table Service
 
+    @Autowired
+    private EmailService emailService;
+
     @Value("${tablePlayService_url}")
     private String TABLE_SERVICE_URL;
 
     @Value("${userService_url}")
     private String USER_SERVICE_URL;
 
-    public BookingServiceImpl(BookingRepo bookingRepo, BookingTableRepo bookingTableRepo, RestTemplate restTemplate, @Value("${tablePlayService_url}") String TABLE_SERVICE_URL, @Value("${userService_url}") String USER_SERVICE_URL) {
+    @Value("${notificationService_url}")
+    private String NOTIFICATION_SERVICE_URL;
+
+    public BookingServiceImpl(BookingRepo bookingRepo, BookingTableRepo bookingTableRepo, RestTemplate restTemplate, @Value("${tablePlayService_url}") String TABLE_SERVICE_URL, @Value("${userService_url}") String USER_SERVICE_URL, @Value("${notificationService_url}") String NOTIFICATION_SERVICE_URL) {
         this.bookingRepo = bookingRepo;
         this.bookingTableRepo = bookingTableRepo;
         this.restTemplate = restTemplate;
         this.TABLE_SERVICE_URL = TABLE_SERVICE_URL;
         this.USER_SERVICE_URL = USER_SERVICE_URL;
+        this.NOTIFICATION_SERVICE_URL = NOTIFICATION_SERVICE_URL;
     }
 
     public void createBooking(BookingRequest bookingRequest) {
@@ -110,6 +119,11 @@ public class BookingServiceImpl implements BookingService{
         }).collect(Collectors.toList());
     }
 
+    public Integer getUserIdByBookingId(Integer bookingId) {
+        Booking booking = bookingRepo.findById(bookingId).orElse(null);
+        return (booking != null) ? booking.getUserId() : null;
+    }
+
     public List<Booking> searchBookings(String fullName, String phone, String status) {
         // URL của API User Service
         String url = USER_SERVICE_URL + "/search?fullName=" + fullName + "&phone=" + phone;
@@ -162,6 +176,65 @@ public class BookingServiceImpl implements BookingService{
         booking.setExpiryTime(expiryTime); // Cập nhật thời gian hết hạn
         booking.setStatus(status); // Cập nhật trạng thái
         bookingRepo.save(booking); // Lưu thay đổi
+
+        if ("Đã Xác Nhận".equals(status)) {
+            NotificationDTO notificationDTO = new NotificationDTO();
+            notificationDTO.setContent("Chào bạn, đơn đặt bàn của bạn đã được xác nhận.");
+            notificationDTO.setNotificationType("BOOKING_CONFIRMATION");
+            notificationDTO.setSendAt(LocalDateTime.now());
+            notificationDTO.setBookingId(id);
+
+            // Lấy userId từ Booking Service
+//            String booking_url = bookingServiceUrl + "/" + id + "/user";
+//            Integer userId = restTemplate.getForObject(booking_url, Integer.class);
+
+            // Lấy userId từ Booking Service
+            // Lấy userId từ Booking Service
+            Integer userId = getUserIdByBookingId(id);
+
+
+
+            if (userId != null) {
+                // Lấy email từ User Service
+                String user_url = USER_SERVICE_URL + "/" + userId + "/email";
+                String email = restTemplate.getForObject(user_url, String.class);
+
+                if (email != null) {
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+                    // Lấy thời gian xác nhận và thời gian đặt bàn
+                    String confirmationTime = notificationDTO.getSendAt().format(formatter);
+                    String formattedBookingTime = booking.getBookingTime().format(formatter);
+
+                    // Gửi email cho khách hàng
+                    String subject = "XÁC NHẬN ĐẶT BÀN";
+                    String body = String.format(
+                            "Chào bạn, đơn đặt bàn của bạn đã được xác nhận. \n\n" +
+                                    "Thời gian xác nhận: %s\n" +
+                                    "Thời gian đặt bàn: %s\n" +
+                                    "Chúng tôi sẽ giữ bàn trong 15 phút kể từ thời gian đặt. Nếu quá thời gian, đơn đặt sẽ bị hủy. \n\n" +
+                                    "Bạn vui lòng chú ý thời gian.",
+                            confirmationTime, formattedBookingTime
+                    );
+
+                    emailService.sendEmail(email, subject, body); // Gửi email
+                }
+            }
+
+            // Gửi yêu cầu tới Notification Service
+            try {
+                ResponseEntity<Void> response = restTemplate.postForEntity(NOTIFICATION_SERVICE_URL, notificationDTO, Void.class);
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    System.out.println("Notification sent successfully");
+                } else {
+                    System.out.println("Failed to send notification");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println("Error sending notification");
+            }
+        }
+
 
         // Lấy danh sách table_id liên quan đến booking
         List<Integer> tableIds = bookingTableRepo.findTableIdsByBookingId(id);

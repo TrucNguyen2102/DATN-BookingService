@@ -57,6 +57,24 @@ public class BookingController {
         this.tablePlayService_url = tablePlayService_url;
     }
 
+    @GetMapping("/endpoints")
+    public List<Map<String, String>> getEndpoints() {
+        return List.of(
+                Map.of("service", "booking-service", "method", "GET", "url", "/api/bookings/orders/today"),
+                Map.of("service", "booking-service", "method", "GET", "url", "/api/bookings/booking_table/most-booked-tables"),
+                Map.of("service", "booking-service", "method", "GET", "url", "/api/bookings/orders/count-tables"),
+                Map.of("service", "booking-service", "method", "GET", "url", "/api/bookings/all"),
+                Map.of("service", "booking-service", "method", "GET", "url", "/api/bookings/{id}/user"),
+                Map.of("service", "booking-service", "method", "PUT", "url", "/api/bookings/update/{id}/status "),
+                Map.of("service", "booking-service", "method", "GET", "url", "/api/bookings/booking_table/{id} "),
+                Map.of("service", "booking-service", "method", "PUT", "url", "/api/bookings/booking_table/update-table-id "),
+                Map.of("service", "booking-service", "method", "PUT", "url", "/api/bookings/booking_table/update-tables "),
+                Map.of("service", "booking-service", "method", "DELETE", "url", "/api/bookings/booking_table/delete"),
+                Map.of("service", "booking-service", "method", "PUT", "url", "/api/bookings/booking_table/update/{id}/status/paymentProcessing"),
+                Map.of("service", "booking-service", "method", "PUT", "url", "/api/bookings/booking_table/update/{bookingId}/status")
+        );
+    }
+
     @PostMapping("/add")
     public ResponseEntity<String> createBooking(@RequestBody BookingRequest bookingRequest) {
         try {
@@ -96,6 +114,19 @@ public class BookingController {
         }catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+
+    }
+
+    //tìm user trong booking
+    @GetMapping("/{id}/user")
+    public ResponseEntity<Integer> getUserIdByBookingId(@PathVariable("id") Integer bookingId) {
+        try {
+            Integer userId = bookingService.getUserIdByBookingId(bookingId);
+            return (userId != null) ? ResponseEntity.ok(userId) : ResponseEntity.notFound().build();
+        }catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
     }

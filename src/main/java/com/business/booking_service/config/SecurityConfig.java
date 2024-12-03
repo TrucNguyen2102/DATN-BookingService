@@ -20,9 +20,11 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/bookings/endpoints").permitAll()
                         .requestMatchers("/api/bookings/add").permitAll()
                         .requestMatchers("/api/bookings/all").permitAll()
                         .requestMatchers("/api/bookings/{id}").permitAll()
+                        .requestMatchers("/api/bookings/{id}/user").permitAll()
                         .requestMatchers("/api/bookings/search").permitAll()
                         .requestMatchers("/api/bookings/update/{id}/status").permitAll()
                         .requestMatchers("/api/bookings/booking_table/update/{bookingId}/status").permitAll()
