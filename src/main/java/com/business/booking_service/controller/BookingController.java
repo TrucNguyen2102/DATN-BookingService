@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -49,17 +50,24 @@ public class BookingController {
     @Value("${tablePlayService_url}")
     private String tablePlayService_url;
 
-    public BookingController(BookingService bookingService, BookingRepo bookingRepo, BookingTableRepo bookingTableRepo, RestTemplate restTemplate, @Value("${tablePlayService_url}") String tablePlayService_url) {
+    @Value("${userService_url}")
+    private String userService_url;
+
+    public BookingController(BookingService bookingService, BookingRepo bookingRepo, BookingTableRepo bookingTableRepo, RestTemplate restTemplate, @Value("${tablePlayService_url}") String tablePlayService_url, @Value("${userService_url}") String userService_url) {
         this.bookingService = bookingService;
         this.bookingRepo = bookingRepo;
         this.bookingTableRepo = bookingTableRepo;
         this.restTemplate = restTemplate;
         this.tablePlayService_url = tablePlayService_url;
+        this.userService_url = userService_url;
     }
 
     @GetMapping("/endpoints")
     public List<Map<String, String>> getEndpoints() {
         return List.of(
+                Map.of("service", "booking-service", "method", "POST", "url", "/api/bookings/add"),
+                Map.of("service", "booking-service", "method", "POST", "url", "/api/bookings/direct"),
+                Map.of("service", "booking-service", "method", "GET", "url", "/api/bookings/check-active"),
                 Map.of("service", "booking-service", "method", "GET", "url", "/api/bookings/orders/today"),
                 Map.of("service", "booking-service", "method", "GET", "url", "/api/bookings/booking_table/most-booked-tables"),
                 Map.of("service", "booking-service", "method", "GET", "url", "/api/bookings/orders/count-tables"),
@@ -71,20 +79,102 @@ public class BookingController {
                 Map.of("service", "booking-service", "method", "PUT", "url", "/api/bookings/booking_table/update-tables "),
                 Map.of("service", "booking-service", "method", "DELETE", "url", "/api/bookings/booking_table/delete"),
                 Map.of("service", "booking-service", "method", "PUT", "url", "/api/bookings/booking_table/update/{id}/status/paymentProcessing"),
-                Map.of("service", "booking-service", "method", "PUT", "url", "/api/bookings/booking_table/update/{bookingId}/status")
+                Map.of("service", "booking-service", "method", "PUT", "url", "/api/bookings/booking_table/update/{bookingId}/status"),
+                Map.of("service", "booking-service", "method", "GET", "url", "/api/bookings/booking_table/check-table-used/{tableId}")
         );
     }
 
+//    @PostMapping("/add")
+//    public ResponseEntity<String> createBooking(@RequestBody BookingRequest bookingRequest) {
+//        try {
+//            bookingService.createBooking(bookingRequest);
+//            return new ResponseEntity<>("Đặt bàn thành công!", HttpStatus.CREATED);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return new ResponseEntity<>("Có lỗi xảy ra khi đặt bàn.", HttpStatus.INTERNAL_SERVER_ERROR);
+//        }
+//    }
     @PostMapping("/add")
     public ResponseEntity<String> createBooking(@RequestBody BookingRequest bookingRequest) {
         try {
             bookingService.createBooking(bookingRequest);
             return new ResponseEntity<>("Đặt bàn thành công!", HttpStatus.CREATED);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             e.printStackTrace();
             return new ResponseEntity<>("Có lỗi xảy ra khi đặt bàn.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @GetMapping("/check-active")
+    public ResponseEntity<?> checkActiveBookings(@RequestParam Integer userId) {
+        try {
+            List<Booking> activeBookings = bookingService.findActiveBookingsByUserId(userId);
+            if (!activeBookings.isEmpty()) {
+                return ResponseEntity.ok(activeBookings);
+            }
+            return ResponseEntity.ok(Collections.emptyList());
+        }catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+
+    }
+
+    //khách vãng lai đến đặt trực tiếp
+    @PostMapping("/direct")
+    public ResponseEntity<?> createDirectBooking(@RequestBody GuestBookingRequest request) {
+        try {
+            // Gọi API để tạo khách vãng lai
+            String userServiceCreateGuestUrl = userService_url + "/create-guest";
+            GuestUserRequest guestUserRequest = new GuestUserRequest(request.getFullName(), request.getPhone());
+            ResponseEntity<Integer> response = restTemplate.postForEntity(userServiceCreateGuestUrl, guestUserRequest, Integer.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                Integer userId = response.getBody(); // Nhận lại userId của khách vãng lai
+                LocalDateTime bookingTime = LocalDateTime.now();
+                LocalDateTime expiryTime = bookingTime.plusMinutes(15);
+                // Tạo Booking
+                Booking booking = new Booking();
+                booking.setBookingTime(bookingTime);  // Lấy thời gian hiện tại khi tạo booking
+                booking.setExpiryTime(expiryTime);
+                booking.setUserId(userId);  // Sử dụng userId của người dùng mới tạo
+                booking.setStatus("Đã Xác Nhận");
+
+                // Lưu Booking
+                booking = bookingRepo.save(booking);
+
+                // Lưu các bàn đã chọn vào BookingTable
+                for (Integer tableId : request.getTableIds()) {
+                    // Khởi tạo BookingTableId
+                    BookingTableId bookingTableId = new BookingTableId();
+                    bookingTableId.setBookingId(booking.getId());
+                    bookingTableId.setTableId(tableId);
+
+                    // Tạo BookingTable
+                    BookingTable bookingTable = new BookingTable();
+                    bookingTable.setId(bookingTableId); // Set BookingTableId cho BookingTable
+                    bookingTable.setBooking(booking);   // Liên kết Booking với BookingTable
+                    bookingTable.setTableId(tableId);   // Set tableId vào BookingTable
+
+                    // Lưu vào bảng booking_table
+                    bookingTableRepo.save(bookingTable);
+                }
+
+                return ResponseEntity.ok("Đặt bàn thành công");
+            } else {
+                return ResponseEntity.status(response.getStatusCode()).body("Không thể tạo khách vãng lai.");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+
+
+
 
 
     @GetMapping("/all")
@@ -168,126 +258,44 @@ public class BookingController {
         }
     }
 
-    //cập nhật trạng thái của booking thành Đã Thanh Toán nếu các bàn là Trống
-//    @PutMapping("/booking_table/update/{bookingId}/status")
-//    public ResponseEntity<String> updateBookingStatusOfTables(@PathVariable Integer bookingId) {
-//        try {
-//            Optional<Booking> bookingOpt = bookingRepo.findById(bookingId);
-//            if (bookingOpt.isEmpty()) {
-//                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Đơn đặt không tồn tại.");
-//            }
-//
-//            Booking booking = bookingOpt.get();
-//
-//            // Lấy danh sách BookingTable liên quan
-//            List<BookingTable> bookingTables = bookingTableRepo.findByBookingId(bookingId);
-//
-//
-//
-//            // Kiểm tra tất cả các bàn có phải "Trống" không
-//            boolean allTablesEmpty = bookingTables.stream().allMatch(bookingTable -> {
-//                try {
-//                    Integer tableId = bookingTable.getTableId();
-//                    String tableStatus = restTemplate.getForObject(
-//                            tablePlayService_url + "/" + tableId,
-//                            String.class
-//                    );
-//
-//                    System.out.println("Table " + tableId + " status: " + tableStatus);
-//                    return "Trống".equals(tableStatus);
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                    return false;
-//                }
-//            });
-//
-//            // Cập nhật trạng thái Booking
-//            if (allTablesEmpty) {
-//                booking.setStatus("Đã Thanh Toán");
-//            } else {
-//                booking.setStatus("Chờ Thanh Toán");
-//            }
-//
-//            bookingRepo.save(booking);
-//            return ResponseEntity.ok("Trạng thái của đơn đặt đã được cập nhật.");
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-//        }
-//    }
 
-//    @PutMapping("/booking_table/update/{bookingId}/status")
-//    public ResponseEntity<String> updateBookingStatusOfTables(@PathVariable Integer bookingId) {
-//        try {
-//            Optional<Booking> bookingOpt = bookingRepo.findById(bookingId);
-//            if (bookingOpt.isEmpty()) {
-//                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Đơn đặt không tồn tại.");
-//            }
-//
-//            Booking booking = bookingOpt.get();
-//
-//            // Lấy danh sách BookingTable liên quan
-//            List<BookingTable> bookingTables = bookingTableRepo.findByBookingId(bookingId);
-//
-//            // Cập nhật trạng thái bàn trực tiếp
-//            for (BookingTable bookingTable : bookingTables) {
-//                Integer tableId = bookingTable.getTableId();
-//
-//                // Lấy trạng thái bàn từ service khác
-//                String tableStatus = restTemplate.getForObject(
-//                        tablePlayService_url + "/" + tableId,
-//                        String.class
-//                );
-//
-//                // Kiểm tra trạng thái bàn và cập nhật nếu cần
-//                System.out.println("Table " + tableId + " status: " + tableStatus);
-//
-//                if ("Đang Chơi".equals(tableStatus)) {
-//                    // Cập nhật trạng thái bàn thành "Trống"
-//                    restTemplate.put(tablePlayService_url + "/" + tableId + "/status", "Trống");
-//                    System.out.println("Bàn " + tableId + " đã được cập nhật trạng thái 'Trống'.");
-//                }
-//            }
-//
-//            // Cập nhật trạng thái của Booking
-//            boolean allTablesEmpty = bookingTables.stream().allMatch(bookingTable -> {
-//                Integer tableId = bookingTable.getTableId();
-//                String tableStatus = restTemplate.getForObject(
-//                        tablePlayService_url + "/" + tableId,
-//                        String.class
-//                );
-//                return "Trống".equals(tableStatus);
-//            });
-//
-//            // Cập nhật trạng thái Booking
-//            if (allTablesEmpty) {
-//                booking.setStatus("Đã Thanh Toán");
-//            } else {
-//                booking.setStatus("Chờ Thanh Toán");
-//            }
-//
-//            bookingRepo.save(booking);
-//            return ResponseEntity.ok("Trạng thái của đơn đặt đã được cập nhật.");
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-//        }
-//    }
 
     //cập nhật trạng thái booking thành Đã Thanh Toán nếu bàn trống hết, ngược lại là Chờ Thanh Toán
     @PutMapping("/booking_table/update/{bookingId}/status")
     public ResponseEntity<?> updateBookingStatus(@PathVariable Integer bookingId) {
         try {
-            // Kiểm tra tất cả các bàn thuộc bookingId có trạng thái "Trống" không
+            // Kiểm tra tất cả các bàn thuộc bookingId có trạng thái "Đang Tiến Hành Thanh Toán" không
+            boolean allTablesEmpty = bookingService.checkAllTablesArePaying(bookingId);
+
+            // Nếu tất cả bàn đều "Đang Tiến Hành Thanh Toán", cập nhật trạng thái booking thành "Đã Thanh Toán"
+            if (allTablesEmpty) {
+                bookingService.updateBookingStatus(bookingId, "Đang Thanh Toán");
+                return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công.");
+            } else {
+                // Nếu có bàn chưa "Trống", cập nhật trạng thái booking thành "Chờ Thanh Toán"
+                bookingService.updateBookingStatus(bookingId, "Chờ Thanh Toán");
+                return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công thành 'Chờ Thanh Toán'.");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Đã xảy ra lỗi khi cập nhật trạng thái booking.");
+        }
+    }
+
+    @PutMapping("/booking_table/update/{bookingId}/status/paying")
+    public ResponseEntity<?> updateBookingStatusIsPaying(@PathVariable Integer bookingId) {
+        try {
+            // Kiểm tra tất cả các bàn thuộc bookingId có trạng thái "Đang Tiến Hành Thanh Toán" không
             boolean allTablesEmpty = bookingService.checkAllTablesAreEmpty(bookingId);
 
-            // Nếu tất cả bàn đều "Trống", cập nhật trạng thái booking thành "Đã Thanh Toán"
+            // Nếu tất cả bàn đều "Đang Tiến Hành Thanh Toán", cập nhật trạng thái booking thành "Đã Thanh Toán"
             if (allTablesEmpty) {
                 bookingService.updateBookingStatus(bookingId, "Đã Thanh Toán");
                 return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công.");
             } else {
                 // Nếu có bàn chưa "Trống", cập nhật trạng thái booking thành "Chờ Thanh Toán"
-                bookingService.updateBookingStatus(bookingId, "Chờ Thanh Toán");
+                bookingService.updateBookingStatus(bookingId, "Đang Thanh Toán");
                 return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công thành 'Chờ Thanh Toán'.");
             }
         } catch (Exception e) {
@@ -338,7 +346,10 @@ public class BookingController {
             @RequestParam(defaultValue = "0") int page,  // Trang mặc định là 0
             @RequestParam(defaultValue = "5") int size   // Số bản ghi mỗi trang là 5
     ) {
-        Pageable pageable = PageRequest.of(page, size);
+//        Pageable pageable = PageRequest.of(page, size);
+//        return bookingService.getUserBookingHistory(userId, pageable);
+        // Thêm sắp xếp theo bookingTime giảm dần
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "bookingTime"));
         return bookingService.getUserBookingHistory(userId, pageable);
     }
 
@@ -351,27 +362,6 @@ public class BookingController {
         response.put("count", count);
         return ResponseEntity.ok(response);
     }
-
-//    @PutMapping("/update/{id}/status")
-//    public ResponseEntity<String> updateBookingAndTableStatus(@PathVariable Integer id, @RequestBody TableStatusUpdateRequest request) {
-//        boolean isUpdated = bookingService.updateTableStatusThroughBooking(id, request.getStatus());
-//        if (isUpdated) {
-//            return ResponseEntity.ok("Trạng thái bàn đã được cập nhật thành công.");
-//        } else {
-//            return ResponseEntity.badRequest().body("Cập nhật trạng thái bàn không thành công.");
-//        }
-//    }
-
-//    @PutMapping("/update/{id}")
-//    public ResponseEntity<String> updateBooking(@PathVariable Integer id, @RequestBody Map<String, Object> request) {
-//        try {
-//
-//        }catch (Exception e) {
-//            e.printStackTrace();
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-//        }
-//    }
-
 
     @GetMapping("/orders/count-tables")
     public ResponseEntity<?> countTablesByDate(@RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -479,68 +469,6 @@ public class BookingController {
         }
     }
 
-    // Endpoint to get tables by booking ID
-//    @GetMapping("/booking_table/{bookingId}")
-//    public ResponseEntity<?> getTableIdByBookingId(@PathVariable Integer bookingId) {
-//        try {
-//            System.out.println("Received bookingId: " + bookingId);
-//
-//            // Lấy danh sách BookingTable liên kết với bookingId
-//            List<BookingTable> tables = bookingTableService.getTablesByBookingId(bookingId);
-//
-//            // Kiểm tra nếu không tìm thấy bàn nào
-//            if (tables.isEmpty()) {
-//                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No tables found for booking ID: " + bookingId);
-//            }
-//
-//            // Lấy danh sách tableId từ BookingTable
-//            List<Integer> tableIds = tables.stream()
-//                    .map(table -> table.getId().getTableId())  // Truy xuất tableId từ BookingTableId
-//                    .collect(Collectors.toList());
-//
-//            System.out.println("Tables found: " + tableIds.size());  // Log số lượng bàn
-//            return new ResponseEntity<>(tableIds, HttpStatus.OK);
-//
-//        } catch (Exception e) {
-//            e.printStackTrace();  // Log chi tiết lỗi
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while processing the request.");
-//        }
-//    }
-
-
-//    @GetMapping("/booking_table/{bookingId}")
-//    public ResponseEntity<?> getTableIdByBookingId(@PathVariable Integer bookingId) {
-//        try {
-//            System.out.println("Received bookingId: " + bookingId);
-//            List<BookingTable> tables = bookingTableService.getTablesByBookingId(bookingId);
-//
-//            // Kiểm tra nếu không tìm thấy bàn nào
-//            if (tables.isEmpty()) {
-//                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No tables found for booking ID: " + bookingId);
-//            }
-//
-//            System.out.println("Returned tables: " + tables);
-//            System.out.println("Tables found: " + tables.size());  // Log số lượng bàn chơi
-//            return new ResponseEntity<>(tables, HttpStatus.OK);
-//
-//        } catch (Exception e) {
-//            e.printStackTrace();  // Log chi tiết lỗi
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while processing the request.");
-//        }
-//    }
-
-//    @GetMapping("/booking_table/{bookingId}/tables")
-//    public ResponseEntity<List<Integer>> getTableIdsByBookingId(@PathVariable Integer bookingId) {
-//        try {
-//            System.out.println("Received bookingId: " + bookingId);
-//            List<Integer> tableIds = bookingTableService.getTableIdsByBookingId(bookingId);
-//            return ResponseEntity.ok(tableIds);
-//        } catch (Exception e) {
-//            e.printStackTrace();  // In ra chi tiết lỗi
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-//        }
-//    }
-
 
     // API để lấy danh sách tableId từ bookingId
     @GetMapping("/{bookingId}/tables")
@@ -558,6 +486,32 @@ public class BookingController {
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(tableIds); // Trả về danh sách tableId
+    }
+
+    // API kiểm tra bàn có trong booking nào không trc khi xóa
+//    @GetMapping("/booking_table/check-table-used/{tableId}")
+//    public ResponseEntity<Boolean> isTableUsedInBooking(@PathVariable Integer tableId) {
+//        try {
+//            boolean isUsed = bookingTableService.isTableUsedInBooking(tableId);
+//            return ResponseEntity.ok(isUsed); // Trả về true/false
+//        }catch (Exception e) {
+//            e.printStackTrace();
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+//        }
+//
+//    }
+
+    @GetMapping("/booking_table/check-table-used/{tableId}")
+   // @GetMapping("/exists/{tableId}")
+    public ResponseEntity<Boolean> checkTableInBooking(@PathVariable("tableId")Integer tableId) {
+        try {
+            boolean exists = bookingTableService.isTableInBooking(tableId);
+            return ResponseEntity.ok(exists);
+        }catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
     }
 
 

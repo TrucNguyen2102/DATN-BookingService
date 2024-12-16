@@ -197,6 +197,10 @@ public class BookingTableServiceImpl implements BookingTableService{
 //        }
 //    }
 
+    public boolean isTableInBooking(Integer tableId) {
+        return bookingTableRepo.existsByTableId(tableId);
+    }
+
 
 
 

@@ -1,6 +1,7 @@
 package com.business.booking_service.task;//package com.entertainment.booking_service.task;
 
 import com.business.booking_service.dto.NotificationDTO;
+import com.business.booking_service.dto.TableUpdateStatus;
 import com.business.booking_service.dto.UpdateTableRequest;
 import com.business.booking_service.entity.Booking;
 import com.business.booking_service.entity.BookingTable;
@@ -10,14 +11,19 @@ import com.business.booking_service.service.BookingService;
 import com.business.booking_service.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class BookingCleanupTask {
@@ -33,7 +39,7 @@ public class BookingCleanupTask {
     private RestTemplate restTemplate;
 
     @Autowired
-    @Value("${tablePlayService}")  // Lấy URL từ application.properties
+    @Value("${tablePlayService_url}")  // Lấy URL từ application.properties
     private String tablePlayServiceUrl; // Địa chỉ URL của TablePlay Service
 
     @Autowired
@@ -50,7 +56,7 @@ public class BookingCleanupTask {
 
     }
 
-    public BookingCleanupTask(BookingRepo bookingRepo, BookingService bookingService, BookingTableRepo bookingTableRepo, RestTemplate restTemplate, @Value("${tablePlayService}") String tablePlayServiceUrl, @Value("${userService_url}") String userServiceUrl,  @Value("${notificationService_url}") String NOTIFICATION_SERVICE_URL, EmailService emailService) {
+    public BookingCleanupTask(BookingRepo bookingRepo, BookingService bookingService, BookingTableRepo bookingTableRepo, RestTemplate restTemplate, @Value("${tablePlayService_url}") String tablePlayServiceUrl, @Value("${userService_url}") String userServiceUrl,  @Value("${notificationService_url}") String NOTIFICATION_SERVICE_URL, EmailService emailService) {
         this.bookingRepo = bookingRepo;
         this.bookingService = bookingService;
         this.bookingTableRepo = bookingTableRepo;
@@ -68,18 +74,40 @@ public class BookingCleanupTask {
         LocalDateTime now = LocalDateTime.now();
         List<Booking> bookings = bookingRepo.findByStatus("Đã Xác Nhận");
 
+
+
         for (Booking booking : bookings) {
             LocalDateTime expiryTime = booking.getBookingTime().plusMinutes(15);
             if (now.isAfter(expiryTime)) {
                 booking.setStatus("Đã Hủy");
                 bookingRepo.save(booking);
 
+                // Lấy danh sách các BookingTable liên kết với booking để tìm bàn liên quan
+                List<BookingTable> bookingTables = bookingTableRepo.findByBooking(booking);
+
+                for (BookingTable bookingTable : bookingTables) {
+                    Integer tableId = bookingTable.getTableId();
+
+                    // Gửi yêu cầu đến Service Table để cập nhật trạng thái bàn
+                    String url = tablePlayServiceUrl + "/" + tableId + "/status";
+                    try {
+                        restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(new TableUpdateStatus("Trống")), Void.class);
+                    } catch (RestClientException e) {
+                        // Xử lý lỗi khi không thể gửi yêu cầu đến Service Table
+                        e.printStackTrace();
+                    }
+                }
+
                 sendCancellationEmail(booking);
 
             }
 
         }
+
+
     }
+
+
 
     // Hàm gửi email thông báo hủy đơn
     private void sendCancellationEmail(Booking booking) {

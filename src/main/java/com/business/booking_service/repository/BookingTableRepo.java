@@ -1,5 +1,6 @@
 package com.business.booking_service.repository;
 
+import com.business.booking_service.entity.Booking;
 import com.business.booking_service.entity.BookingTable;
 import com.business.booking_service.entity.BookingTableId;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,6 +16,7 @@ import java.util.Optional;
 
 @Repository
 public interface BookingTableRepo extends JpaRepository<BookingTable, BookingTableId> {
+    List<BookingTable> findByBooking(Booking booking);
     List<BookingTable> findByBookingId(Integer bookingId);
 
     // Custom query để tìm theo bookingId
@@ -38,6 +40,8 @@ public interface BookingTableRepo extends JpaRepository<BookingTable, BookingTab
 
 
 
+
+
     boolean existsByTableIdAndBooking_Status(Integer tableId, String status);
 
     BookingTable findByBookingIdAndTableId(Integer bookingId, Integer tableId);
@@ -55,4 +59,10 @@ public interface BookingTableRepo extends JpaRepository<BookingTable, BookingTab
     void updateTableIds(@Param("bookingId") Integer bookingId,
                        @Param("oldTableId") Integer oldTableId,
                        @Param("newTableId") Integer newTableId);
+
+//    boolean existsByIdTableId(Integer tableId);
+
+
+    @Query("SELECT COUNT(bt) > 0 FROM BookingTable bt WHERE bt.id.tableId = :tableId")
+    boolean existsByTableId(@Param("tableId") Integer tableId);
 }

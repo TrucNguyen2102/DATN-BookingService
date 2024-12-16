@@ -17,6 +17,8 @@ public interface BookingService {
 
     void createBooking(BookingRequest bookingRequest);
 
+    List<Booking> findActiveBookingsByUserId(Integer userId);
+
     List<BookingResponseDTO> getAllBookings();
 
     Integer getUserIdByBookingId(Integer bookingId);
@@ -33,8 +35,12 @@ Page<BookingResponseDTO> getUserBookingHistory(Integer userId, Pageable pageable
 
     Optional<Booking> getBookingById(Integer id);
 
+    boolean checkAllTablesArePaying(Integer bookingId);
+
     boolean checkAllTablesAreEmpty(Integer bookingId);
     boolean checkAllTablesArePaymentProcessing(Integer bookingId);
 
     void updateBookingStatus(Integer bookingId, String status);
+
+    boolean isTableBooked(Integer tableId);
 }

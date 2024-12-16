@@ -34,4 +34,11 @@ public interface BookingRepo extends JpaRepository<Booking, Integer> {
 
     // Tìm các Booking theo danh sách userId và trạng thái
     List<Booking> findByUserIdInAndStatus(List<Integer> userIds, String status);
+
+
+    @Query("SELECT b FROM Booking b WHERE b.userId = :userId AND b.status IN ('Chờ Xác Nhận', 'Đã Xác Nhận', 'Đã Nhận Bàn', 'Chưa Thanh Toán', 'Chờ Thanh Toán')")
+    List<Booking> findActiveBookingsByUserId(@Param("userId") Integer userId);
+
+    // Kiểm tra xem người dùng đã có đơn đặt nào chưa kết thúc (trong danh sách các trạng thái)
+    boolean existsByUserIdAndStatusIn(Integer userId, List<String> statuses);
 }

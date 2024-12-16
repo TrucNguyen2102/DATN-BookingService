@@ -30,7 +30,7 @@ public class Booking {
     private Integer userId; //Khóa ngoại của User trong user-service
 
 
-    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JsonManagedReference
     private List<BookingTable> bookingTables; // Danh sách các bàn đặt
 

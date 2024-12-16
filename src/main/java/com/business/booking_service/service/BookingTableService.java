@@ -26,6 +26,8 @@ public interface BookingTableService {
 
    List<Integer> getTableIdsByBookingId(Integer bookingId);
 
+   boolean isTableInBooking(Integer tableId);
+
 
 
 }

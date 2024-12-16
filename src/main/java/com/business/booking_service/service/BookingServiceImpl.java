@@ -59,6 +59,17 @@ public class BookingServiceImpl implements BookingService{
         LocalDateTime bookingTime = bookingRequest.getBookingTime();
         List<Integer> tableIds = bookingRequest.getTableIds();
 
+        Integer userId = bookingRequest.getUserId();
+
+        // Kiểm tra xem người dùng có đơn đặt nào chưa kết thúc không
+        List<String> pendingStatuses = Arrays.asList("Chờ Xác Nhận", "Đã Xác Nhận", "Đã Nhận Bàn", "Chưa Thanh Toán", "Chờ Thanh Toán");
+        boolean hasPendingBooking = bookingRepo.existsByUserIdAndStatusIn(userId, pendingStatuses);
+
+        if (hasPendingBooking) {
+            throw new IllegalArgumentException("Người dùng này đã có đơn đặt bàn chưa kết thúc. Vui lòng hoàn thành đơn đặt cũ trước khi đặt mới.");
+        }
+
+
         for (Integer tableId : tableIds) {
             // Kiểm tra xem bàn đã có đơn nào chờ xác nhận chưa
             boolean isPending = bookingTableRepo.existsByTableIdAndBooking_Status(tableId, "Chờ Xác Nhận");
@@ -96,6 +107,10 @@ public class BookingServiceImpl implements BookingService{
 
         // Lưu tất cả các BookingTable cùng lúc
         bookingTableRepo.saveAll(bookingTables);
+    }
+
+    public List<Booking> findActiveBookingsByUserId(Integer userId) {
+        return bookingRepo.findActiveBookingsByUserId(userId);
     }
 
 
@@ -315,6 +330,24 @@ public class BookingServiceImpl implements BookingService{
 
     // Kiểm tra tất cả bàn thuộc bookingId có trạng thái "Trống" không
     // Kiểm tra tất cả bàn thuộc bookingId có trạng thái "Trống" không
+    public boolean checkAllTablesArePaying(Integer bookingId) {
+        // Lấy tất cả các BookingTable thuộc bookingId
+        List<BookingTable> bookingTables = bookingTableRepo.findByBookingId(bookingId);
+
+        // Kiểm tra trạng thái bàn "Trống" qua API của Table Service
+        for (BookingTable bookingTable : bookingTables) {
+            Integer tableId = bookingTable.getTableId();  // Lấy tableId từ BookingTable
+            String url = TABLE_SERVICE_URL + "/" + tableId + "/status";  // Gọi API của Table Service
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, null, String.class);
+
+            // Nếu bàn có trạng thái khác "Trống", trả về false
+            if (!"Đang Tiến Hành Thanh Toán".equals(response.getBody())) {
+                return false;
+            }
+        }
+        return true;  // Nếu tất cả bàn đều "Trống", trả về true
+    }
+
     public boolean checkAllTablesAreEmpty(Integer bookingId) {
         // Lấy tất cả các BookingTable thuộc bookingId
         List<BookingTable> bookingTables = bookingTableRepo.findByBookingId(bookingId);
@@ -361,6 +394,10 @@ public class BookingServiceImpl implements BookingService{
             bookingRepo.save(booking);
             System.out.println("Đã cập nhật trạng thái bookingId " + bookingId + " thành: " + status);
         }
+    }
+
+    public boolean isTableBooked(Integer tableId) {
+        return bookingTableRepo.existsByTableId(tableId);
     }
 
 

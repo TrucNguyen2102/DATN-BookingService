@@ -22,12 +22,15 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/bookings/endpoints").permitAll()
                         .requestMatchers("/api/bookings/add").permitAll()
+                        .requestMatchers("/api/bookings/check-active").permitAll()
+                        .requestMatchers("/api/bookings/direct").permitAll()
                         .requestMatchers("/api/bookings/all").permitAll()
                         .requestMatchers("/api/bookings/{id}").permitAll()
                         .requestMatchers("/api/bookings/{id}/user").permitAll()
                         .requestMatchers("/api/bookings/search").permitAll()
                         .requestMatchers("/api/bookings/update/{id}/status").permitAll()
                         .requestMatchers("/api/bookings/booking_table/update/{bookingId}/status").permitAll()
+                        .requestMatchers("/api/bookings/booking_table/update/{bookingId}/status/paying").permitAll()
                         .requestMatchers("/api/bookings/booking_table/update/{bookingId}/status/paymentProcessing").permitAll()
                         .requestMatchers("/api/bookings/history/{userId}").permitAll()
                         .requestMatchers("/api/bookings/booking_table/{bookingId}").permitAll()
@@ -40,6 +43,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/bookings/{bookingId}/tables").permitAll()
 
                         .requestMatchers("/api/bookings/bookingTables/{bookingId}").permitAll()
+                        .requestMatchers("/api/bookings/booking_table/check-table-used/{tableId}").permitAll()
                         .anyRequest().authenticated()
 
                 );
