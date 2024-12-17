@@ -260,19 +260,19 @@ public class BookingController {
 
 
 
-    //cập nhật trạng thái booking thành Đã Thanh Toán nếu bàn trống hết, ngược lại là Chờ Thanh Toán
+    //cập nhật trạng thái booking thành Đang Thanh Toán nếu bàn trống hết, ngược lại là Chờ Thanh Toán
     @PutMapping("/booking_table/update/{bookingId}/status")
     public ResponseEntity<?> updateBookingStatus(@PathVariable Integer bookingId) {
         try {
             // Kiểm tra tất cả các bàn thuộc bookingId có trạng thái "Đang Tiến Hành Thanh Toán" không
             boolean allTablesEmpty = bookingService.checkAllTablesArePaying(bookingId);
 
-            // Nếu tất cả bàn đều "Đang Tiến Hành Thanh Toán", cập nhật trạng thái booking thành "Đã Thanh Toán"
+            // Nếu tất cả bàn đều "Đang Tiến Hành Thanh Toán", cập nhật trạng thái booking thành "Đang Thanh Toán"
             if (allTablesEmpty) {
                 bookingService.updateBookingStatus(bookingId, "Đang Thanh Toán");
                 return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công.");
             } else {
-                // Nếu có bàn chưa "Trống", cập nhật trạng thái booking thành "Chờ Thanh Toán"
+                // Nếu có bàn chưa "Đang Tiến Hành Thanh Toán", cập nhật trạng thái booking thành "Chờ Thanh Toán"
                 bookingService.updateBookingStatus(bookingId, "Chờ Thanh Toán");
                 return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công thành 'Chờ Thanh Toán'.");
             }
@@ -286,15 +286,15 @@ public class BookingController {
     @PutMapping("/booking_table/update/{bookingId}/status/paying")
     public ResponseEntity<?> updateBookingStatusIsPaying(@PathVariable Integer bookingId) {
         try {
-            // Kiểm tra tất cả các bàn thuộc bookingId có trạng thái "Đang Tiến Hành Thanh Toán" không
+            // Kiểm tra tất cả các bàn thuộc bookingId có trạng thái "Trống" không
             boolean allTablesEmpty = bookingService.checkAllTablesAreEmpty(bookingId);
 
-            // Nếu tất cả bàn đều "Đang Tiến Hành Thanh Toán", cập nhật trạng thái booking thành "Đã Thanh Toán"
+            // Nếu tất cả bàn đều "Trống", cập nhật trạng thái booking thành "Đã Thanh Toán"
             if (allTablesEmpty) {
                 bookingService.updateBookingStatus(bookingId, "Đã Thanh Toán");
                 return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công.");
             } else {
-                // Nếu có bàn chưa "Trống", cập nhật trạng thái booking thành "Chờ Thanh Toán"
+                // Nếu có bàn chưa "Trống", cập nhật trạng thái booking thành "Đang Thanh Toán"
                 bookingService.updateBookingStatus(bookingId, "Đang Thanh Toán");
                 return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công thành 'Chờ Thanh Toán'.");
             }
@@ -309,7 +309,7 @@ public class BookingController {
     @PutMapping("/booking_table/update/{bookingId}/status/paymentProcessing")
     public ResponseEntity<?> updateBookingStatusIsPaymentProcessing(@PathVariable Integer bookingId) {
         try {
-            // Kiểm tra tất cả các bàn thuộc bookingId có trạng thái "Trống" không
+            // Kiểm tra tất cả các bàn thuộc bookingId có trạng thái "Đang Xử Lý Thanh Toán" không
             boolean allTablesPayment = bookingService.checkAllTablesArePaymentProcessing(bookingId);
             System.out.println("Kết quả kiểm tra tất cả bàn: " + allTablesPayment);
 

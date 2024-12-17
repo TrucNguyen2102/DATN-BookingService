@@ -41,4 +41,10 @@ public interface BookingRepo extends JpaRepository<Booking, Integer> {
 
     // Kiểm tra xem người dùng đã có đơn đặt nào chưa kết thúc (trong danh sách các trạng thái)
     boolean existsByUserIdAndStatusIn(Integer userId, List<String> statuses);
+
+    //Integer countByUserIdAndStatus(Integer userId, String status);
+
+    List<Booking> findByUserIdAndStatus(Integer userId, String status);
+
+    Booking findTopByUserIdOrderByBookingTimeDesc(Integer userId);
 }

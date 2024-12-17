@@ -340,12 +340,12 @@ public class BookingServiceImpl implements BookingService{
             String url = TABLE_SERVICE_URL + "/" + tableId + "/status";  // Gọi API của Table Service
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, null, String.class);
 
-            // Nếu bàn có trạng thái khác "Trống", trả về false
+            // Nếu bàn có trạng thái khác "Đang Tiến Hành Thanh Toán", trả về false
             if (!"Đang Tiến Hành Thanh Toán".equals(response.getBody())) {
                 return false;
             }
         }
-        return true;  // Nếu tất cả bàn đều "Trống", trả về true
+        return true;  // Nếu tất cả bàn đều "Đang Tiến Hành Thanh Toán", trả về true
     }
 
     public boolean checkAllTablesAreEmpty(Integer bookingId) {
@@ -370,7 +370,7 @@ public class BookingServiceImpl implements BookingService{
         // Lấy tất cả các BookingTable thuộc bookingId
         List<BookingTable> bookingTables = bookingTableRepo.findByBookingId(bookingId);
 
-        // Kiểm tra trạng thái bàn "Trống" qua API của Table Service
+        // Kiểm tra trạng thái bàn "Đang Xử Lý Thanh Toán" qua API của Table Service
         for (BookingTable bookingTable : bookingTables) {
             Integer tableId = bookingTable.getTableId();  // Lấy tableId từ BookingTable
             String url = TABLE_SERVICE_URL + "/" + tableId + "/status";  // Gọi API của Table Service
@@ -381,7 +381,7 @@ public class BookingServiceImpl implements BookingService{
                 return false;
             }
         }
-        return true;  // Nếu tất cả bàn đều "Trống", trả về true
+        return true;  // Nếu tất cả bàn đều "Đang Xử Lý Thanh Toán", trả về true
     }
 
     // Cập nhật trạng thái booking thành "Đã Thanh Toán"
