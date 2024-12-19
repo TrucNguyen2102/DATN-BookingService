@@ -334,19 +334,38 @@ public class BookingServiceImpl implements BookingService{
         // Lấy tất cả các BookingTable thuộc bookingId
         List<BookingTable> bookingTables = bookingTableRepo.findByBookingId(bookingId);
 
-        // Kiểm tra trạng thái bàn "Trống" qua API của Table Service
+        // Kiểm tra trạng thái bàn  qua API của Table Service
         for (BookingTable bookingTable : bookingTables) {
             Integer tableId = bookingTable.getTableId();  // Lấy tableId từ BookingTable
             String url = TABLE_SERVICE_URL + "/" + tableId + "/status";  // Gọi API của Table Service
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, null, String.class);
 
             // Nếu bàn có trạng thái khác "Đang Tiến Hành Thanh Toán", trả về false
-            if (!"Đang Tiến Hành Thanh Toán".equals(response.getBody())) {
+            if (!"Đang Tiến Hành Thanh Toán".equals(response.getBody()) && !"Trống".equals(response.getBody())) {
                 return false;
             }
         }
         return true;  // Nếu tất cả bàn đều "Đang Tiến Hành Thanh Toán", trả về true
     }
+
+    public boolean checkAnyTableIsPlaying(Integer bookingId) {
+        List<BookingTable> bookingTables = bookingTableRepo.findByBookingId(bookingId);
+
+        // Kiểm tra trạng thái của từng bàn
+        for (BookingTable bookingTable : bookingTables) {
+            Integer tableId = bookingTable.getTableId();  // Lấy tableId từ BookingTable
+            String url = TABLE_SERVICE_URL + "/" + tableId + "/status";  // Gọi API của Table Service
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, null, String.class);
+
+            String tableStatus = response.getBody();
+            // Nếu có bàn nào có trạng thái "Đang Chơi", trả về true
+            if ("Đang Chơi".equals(tableStatus)) {
+                return true;
+            }
+        }
+        return false;  // Nếu không có bàn nào có trạng thái "Đang Chơi"
+    }
+
 
     public boolean checkAllTablesAreEmpty(Integer bookingId) {
         // Lấy tất cả các BookingTable thuộc bookingId
@@ -377,7 +396,7 @@ public class BookingServiceImpl implements BookingService{
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, null, String.class);
             System.out.println("Bàn ID: " + tableId + " - Trạng thái từ API: " + response.getBody());
             // Nếu bàn có trạng thái khác "Đang Xử Lý Thanh Toán", trả về false
-            if (!"Đang Xử Lý Thanh Toán".equals(response.getBody())) {
+            if (!"Đang Xử Lý Thanh Toán".equals(response.getBody()) && !"Trống".equals(response.getBody())) {
                 return false;
             }
         }

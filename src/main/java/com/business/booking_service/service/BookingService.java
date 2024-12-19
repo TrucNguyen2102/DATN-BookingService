@@ -43,4 +43,6 @@ Page<BookingResponseDTO> getUserBookingHistory(Integer userId, Pageable pageable
     void updateBookingStatus(Integer bookingId, String status);
 
     boolean isTableBooked(Integer tableId);
+
+    boolean checkAnyTableIsPlaying(Integer bookingId);
 }

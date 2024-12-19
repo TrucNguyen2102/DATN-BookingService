@@ -290,6 +290,89 @@ public class BookingCleanupTask {
         this.notificationSentMap = notificationSentMap;
     }
 
+    @Scheduled(cron = "0 * * * * *") // Chạy mỗi phút
+    public void autoConfirmBookings() {
+        LocalDateTime now = LocalDateTime.now();
+
+        // Lấy danh sách các booking chưa xác nhận từ database
+        List<Booking> bookings = bookingRepo.findByStatus("Chờ Xác Nhận");
+
+        // Tự động cập nhật trạng thái thành "Đã Xác Nhận" nếu còn 5 phút trước giờ đặt
+        for (Booking booking : bookings) {
+            LocalDateTime autoConfirmTime = booking.getBookingTime().minusMinutes(5);
+            LocalDateTime expiryTime = booking.getBookingTime().plusMinutes(15);
+            if (now.isAfter(autoConfirmTime) && now.isBefore(booking.getBookingTime()) && !booking.getStatus().equals("Đã Xác Nhận")) {
+                booking.setStatus("Đã Xác Nhận");
+                booking.setExpiryTime(expiryTime);
+                bookingRepo.save(booking); // Lưu trạng thái mới vào DB
+                System.out.println("Đơn đặt bàn ID " + booking.getId() + " đã được tự động xác nhận.");
+
+                // Lấy danh sách các BookingTable liên kết với booking để tìm bàn liên quan
+                List<BookingTable> bookingTables = bookingTableRepo.findByBooking(booking);
+
+                for (BookingTable bookingTable : bookingTables) {
+                    Integer tableId = bookingTable.getTableId();
+
+                    // Gửi yêu cầu đến Service Table để cập nhật trạng thái bàn
+                    String url = tablePlayServiceUrl + "/" + tableId + "/status";
+                    try {
+                        restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(new TableUpdateStatus("Đã Đặt")), Void.class);
+                    } catch (RestClientException e) {
+                        // Xử lý lỗi khi không thể gửi yêu cầu đến Service Table
+                        e.printStackTrace();
+                    }
+                }
+
+                // Gửi thông báo nhắc nhở hoặc cập nhật trạng thái
+                sendAutoConfirmationNotification(booking);
+            }
+        }
+    }
+
+
+    private void sendAutoConfirmationNotification(Booking booking) {
+        NotificationDTO notificationDTO = new NotificationDTO();
+        notificationDTO.setContent("Chào bạn, đơn đặt bàn của bạn đã được xác nhận.");
+        notificationDTO.setNotificationType("BOOKING_CONFIRMATION");
+        notificationDTO.setSendAt(LocalDateTime.now());
+        notificationDTO.setBookingId(booking.getId());
+
+        Integer userId = bookingService.getUserIdByBookingId(booking.getId());
+        if (userId != null) {
+            // Lấy email từ User Service
+            String userUrl = userServiceUrl + "/" + userId + "/email";
+            try {
+                String email = restTemplate.getForObject(userUrl, String.class);
+
+                if (email != null) {
+                    String subject = "XÁC NHẬN ĐẶT BÀN";
+                    String body = String.format(
+                            "Chào bạn, đơn đặt bàn của bạn đã được xác nhận. \n\n" +
+                                    "Thời gian xác nhận: %s\n" +
+                                    "Thời gian đặt bàn: %s\n" +
+                                    "Chúng tôi sẽ giữ bàn trong 15 phút kể từ thời gian đặt. Nếu quá thời gian, đơn đặt sẽ bị hủy. \n\n" +
+                                    "Bạn vui lòng chú ý thời gian.",
+                            booking.getBookingTime().format(DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm"))
+                    );
+
+                    emailService.sendEmail(email, subject, body);
+                    System.out.println("Đã gửi email tự động xác nhận cho: " + email);
+                }
+            } catch (Exception e) {
+                System.out.println("Không thể gửi email xác nhận: " + e.getMessage());
+            }
+        }
+
+        // Gửi thông báo tới Notification Service
+        try {
+            restTemplate.postForEntity(NOTIFICATION_SERVICE_URL, notificationDTO, Void.class);
+            System.out.println("Đã gửi thông báo xác nhận thành công.");
+        } catch (Exception e) {
+            System.out.println("Lỗi khi gửi thông báo xác nhận: " + e.getMessage());
+        }
+    }
+
+
 
 
     @Scheduled(cron = "0 * * * * *") // Chạy mỗi phút
@@ -381,7 +464,7 @@ public class BookingCleanupTask {
 
                 if (email != null) {
                     // Chuẩn bị nội dung email
-                    String subject = "Tài khoản bị tạm khóa do vi phạm chính sách";
+                    String subject = "VI PHẠM CHÍNH SÁCH ĐẶT BÀN";
                     String body = "Chào bạn, tài khoản của bạn bị khóa do vi phạm chính sách đặt bàn của chúng tôi. \n\n" +
                             "Bạn có thể tiếp tục sử dụng dịch vụ sau 3 ngày. \n\n" +
                             "Xin lỗi và cảm ơn bạn đã hiểu.";
@@ -487,7 +570,7 @@ public class BookingCleanupTask {
             String email = restTemplate.getForObject(userUrl, String.class);
 
             if (email != null) {
-                String subject = "Nhắc nhở đặt bàn";
+                String subject = "NHẮC NHỞ ĐẶT BÀN";
                 String body = String.format(
                         "Bạn có một đơn đặt bàn vào lúc: %s.\n" +
                                 "Hãy kiểm tra để đảm bảo không bỏ lỡ!\n\n" +

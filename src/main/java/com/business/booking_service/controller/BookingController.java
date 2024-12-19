@@ -240,6 +240,7 @@ public class BookingController {
     }
 
 
+    //khi nhân viên xác nhận đơn
     @PutMapping("/update/{id}/status")
     public ResponseEntity<String> updateBookingStatus(@PathVariable Integer id, @RequestBody BookingStatusUpdateRequest request) {
         // Lấy thông tin booking hiện tại
@@ -259,45 +260,68 @@ public class BookingController {
     }
 
 
-
-    //cập nhật trạng thái booking thành Đang Thanh Toán nếu bàn trống hết, ngược lại là Chờ Thanh Toán
+    //này là nút in hóa đơn
+    //cập nhật trạng thái booking thành Đang Thanh Toán nếu bàn Đang Tiến Hành Thanh Toán hết, ngược lại là Chờ Thanh Toán
     @PutMapping("/booking_table/update/{bookingId}/status")
     public ResponseEntity<?> updateBookingStatus(@PathVariable Integer bookingId) {
         try {
-            // Kiểm tra tất cả các bàn thuộc bookingId có trạng thái "Đang Tiến Hành Thanh Toán" không
-            boolean allTablesEmpty = bookingService.checkAllTablesArePaying(bookingId);
+            // Kiểm tra tất cả các bàn thuộc bookingId có trạng thái "Đang Chơi"
+            boolean hasPlayingTable = bookingService.checkAnyTableIsPlaying(bookingId);
 
-            // Nếu tất cả bàn đều "Đang Tiến Hành Thanh Toán", cập nhật trạng thái booking thành "Đang Thanh Toán"
-            if (allTablesEmpty) {
-                bookingService.updateBookingStatus(bookingId, "Đang Thanh Toán");
-                return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công.");
+            if (hasPlayingTable) {
+                // Nếu có bàn "Đang Chơi", không thay đổi trạng thái booking
+                bookingService.updateBookingStatus(bookingId, "Đã Nhận Bàn");
+                return ResponseEntity.ok("Trạng thái booking vẫn là 'Đã Nhận Bàn' do có bàn 'Đang Chơi'.");
             } else {
-                // Nếu có bàn chưa "Đang Tiến Hành Thanh Toán", cập nhật trạng thái booking thành "Chờ Thanh Toán"
-                bookingService.updateBookingStatus(bookingId, "Chờ Thanh Toán");
-                return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công thành 'Chờ Thanh Toán'.");
+                // Kiểm tra tất cả các bàn thuộc bookingId có trạng thái "Đang Tiến Hành Thanh Toán" không
+                boolean allTablesEmpty = bookingService.checkAllTablesArePaying(bookingId);
+
+                // Nếu tất cả bàn đều "Đang Tiến Hành Thanh Toán", cập nhật trạng thái booking thành "Đang Thanh Toán"
+                if (allTablesEmpty) {
+                    bookingService.updateBookingStatus(bookingId, "Đang Thanh Toán");
+                    return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công.");
+                } else {
+                    // Nếu có bàn chưa "Đang Tiến Hành Thanh Toán", cập nhật trạng thái booking thành "Chờ Thanh Toán"
+                    bookingService.updateBookingStatus(bookingId, "Chờ Thanh Toán");
+                    return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công thành 'Chờ Thanh Toán'.");
+                }
             }
+
+
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Đã xảy ra lỗi khi cập nhật trạng thái booking.");
         }
     }
+
 
     @PutMapping("/booking_table/update/{bookingId}/status/paying")
     public ResponseEntity<?> updateBookingStatusIsPaying(@PathVariable Integer bookingId) {
         try {
-            // Kiểm tra tất cả các bàn thuộc bookingId có trạng thái "Trống" không
-            boolean allTablesEmpty = bookingService.checkAllTablesAreEmpty(bookingId);
+            // Kiểm tra tất cả các bàn thuộc bookingId có trạng thái "Đang Chơi"
+            boolean hasPlayingTable = bookingService.checkAnyTableIsPlaying(bookingId);
 
-            // Nếu tất cả bàn đều "Trống", cập nhật trạng thái booking thành "Đã Thanh Toán"
-            if (allTablesEmpty) {
-                bookingService.updateBookingStatus(bookingId, "Đã Thanh Toán");
-                return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công.");
+            if (hasPlayingTable) {
+                // Nếu có bàn "Đang Chơi", không thay đổi trạng thái booking
+                bookingService.updateBookingStatus(bookingId, "Đã Nhận Bàn");
+                return ResponseEntity.ok("Trạng thái booking vẫn là 'Đã Nhận Bàn' do có bàn 'Đang Chơi'.");
             } else {
-                // Nếu có bàn chưa "Trống", cập nhật trạng thái booking thành "Đang Thanh Toán"
-                bookingService.updateBookingStatus(bookingId, "Đang Thanh Toán");
-                return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công thành 'Chờ Thanh Toán'.");
+                // Kiểm tra tất cả các bàn thuộc bookingId có trạng thái "Trống" không
+                boolean allTablesEmpty = bookingService.checkAllTablesAreEmpty(bookingId);
+
+                // Nếu tất cả bàn đều "Trống", cập nhật trạng thái booking thành "Đã Thanh Toán"
+                if (allTablesEmpty) {
+                    bookingService.updateBookingStatus(bookingId, "Đã Thanh Toán");
+                    return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công.");
+                } else {
+                    // Nếu có bàn chưa "Trống", cập nhật trạng thái booking thành "Đang Thanh Toán"
+                    bookingService.updateBookingStatus(bookingId, "Đang Thanh Toán");
+                    return ResponseEntity.ok("Trạng thái booking đã được cập nhật thành công thành 'Chờ Thanh Toán'.");
+                }
             }
+
+
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -305,6 +329,7 @@ public class BookingController {
         }
     }
 
+    //khi ấn lưu để tạo hóa
     //cập nhật trạng thái booking thành Chưa Thanh Toán nếu bàn đang xử lý thanh toán hết, ngược lại là Đã Nhận Bàn
     @PutMapping("/booking_table/update/{bookingId}/status/paymentProcessing")
     public ResponseEntity<?> updateBookingStatusIsPaymentProcessing(@PathVariable Integer bookingId) {
