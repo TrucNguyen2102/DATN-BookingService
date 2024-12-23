@@ -33,6 +33,10 @@ Page<BookingResponseDTO> getUserBookingHistory(Integer userId, Pageable pageable
 
     int getOrdersToday(LocalDate date);
 
+   // int getOrdersToday(LocalDate startDate, LocalDate endDate);
+
+//    int getTotalOrders(String startDate, String endDate);
+
     Optional<Booking> getBookingById(Integer id);
 
     boolean checkAllTablesArePaying(Integer bookingId);

@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +30,14 @@ public interface BookingTableRepo extends JpaRepository<BookingTable, BookingTab
 
     @Query("SELECT bt.tableId, COUNT(bt) FROM BookingTable bt WHERE DATE(bt.booking.bookingTime) = :date GROUP BY bt.tableId ORDER BY COUNT(bt) DESC")
     List<Object[]> findMostBookedTables(@Param("date") java.sql.Date date);
+
+    @Query("SELECT bt.tableId, COUNT(bt) " +
+            "FROM BookingTable bt " +
+            "WHERE DATE(bt.booking.bookingTime) BETWEEN :startDate AND :endDate AND bt.booking.status != 'Đã Hủy'" +
+            "GROUP BY bt.tableId " +
+            "ORDER BY COUNT(bt) DESC")
+    List<Object[]> findMostBookedTables(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
 
 
 

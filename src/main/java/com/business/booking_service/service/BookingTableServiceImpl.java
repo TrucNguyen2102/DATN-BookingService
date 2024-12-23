@@ -18,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -201,6 +202,9 @@ public class BookingTableServiceImpl implements BookingTableService{
         return bookingTableRepo.existsByTableId(tableId);
     }
 
+    public List<Object[]> getMostBookedTables(LocalDate startDate, LocalDate endDate) {
+        return bookingTableRepo.findMostBookedTables(startDate, endDate);
+    }
 
 
 

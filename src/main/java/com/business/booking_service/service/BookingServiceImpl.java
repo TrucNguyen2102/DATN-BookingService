@@ -323,6 +323,16 @@ public class BookingServiceImpl implements BookingService{
         return bookingRepo.countOrdersToday(date);
     }
 
+//    public int getTotalOrders(String startDate, String endDate) {
+//        LocalDate start = LocalDate.parse(startDate);
+//        LocalDate end = LocalDate.parse(endDate);
+//        return bookingRepo.countByBookingTimeBetween(start, end);
+//    }
+
+//    public int getOrdersToday(LocalDate startDate, LocalDate endDate) {
+//        return bookingRepo.countOrdersToday(startDate, endDate);
+//    }
+
     public Optional<Booking> getBookingById(Integer id) {
         return bookingRepo.findById(id);
     }

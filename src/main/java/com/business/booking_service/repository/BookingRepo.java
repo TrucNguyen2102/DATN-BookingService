@@ -27,10 +27,25 @@ public interface BookingRepo extends JpaRepository<Booking, Integer> {
     @Query("SELECT COUNT(b) FROM Booking b WHERE DATE(b.bookingTime) = :date")
     int countOrdersToday(@Param("date") LocalDate date);
 
-//    @Query("SELECT COUNT(b) FROM Booking b WHERE DATE(b.bookingTime) = :date")
+    // Đếm số lượng đơn đặt trong khoảng thời gian (ko tính đơn bị hủy)
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.bookingTime BETWEEN :startDate AND :endDate AND b.status != 'Đã Hủy'")
+    int countByBookingTimeBetween(@Param("startDate") LocalDateTime startDate,
+                                  @Param("endDate") LocalDateTime endDate);
+
+    //int countByBookingTimeBetween(LocalDateTime startDate, LocalDateTime endDate);
+
+//    @Query("SELECT COUNT(b) FROM Booking b WHERE b.bookingTime BETWEEN :startDate AND :endDate")
+//    int countOrdersToday(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+
+    //    @Query("SELECT COUNT(b) FROM Booking b WHERE DATE(b.bookingTime) = :date")
 //    int countTablesByDate(@Param("date") LocalDate date);
-    @Query("SELECT COUNT(bt) FROM BookingTable bt JOIN bt.booking b WHERE DATE(b.bookingTime) = :date")
-    int countTablesByDate(@Param("date") LocalDate date);
+//    @Query("SELECT COUNT(bt) FROM BookingTable bt JOIN bt.booking b WHERE DATE(b.bookingTime) = :date")
+//    int countTablesByDate(@Param("date") LocalDate date);
+
+    @Query("SELECT COUNT(bt) FROM BookingTable bt WHERE bt.booking.bookingTime BETWEEN :startDate AND :endDate  AND bt.booking.status != 'Đã Hủy'" )
+    int countTablesByDateRange(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
 
     // Tìm các Booking theo danh sách userId và trạng thái
     List<Booking> findByUserIdInAndStatus(List<Integer> userIds, String status);

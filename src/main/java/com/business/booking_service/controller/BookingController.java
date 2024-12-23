@@ -26,6 +26,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -388,17 +389,85 @@ public class BookingController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/orders/count-tables")
-    public ResponseEntity<?> countTablesByDate(@RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+    // API lấy tổng số đơn theo khoảng thời gian
+    @GetMapping("/orders/range")
+    public ResponseEntity<Map<String, Object>> getTotalOrders(
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
         try {
-            int count = bookingRepo.countTablesByDate(date);
-            return ResponseEntity.ok(Map.of("count", count));
+            // Chuyển đổi từ String sang LocalDate
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+
+            // Chuyển startDate và endDate sang LocalDateTime để tính cả ngày
+            LocalDateTime startDateTime = start.atStartOfDay(); // Từ 00:00:00 của ngày bắt đầu
+            LocalDateTime endDateTime = end.atTime(23, 59, 59); // Đến 23:59:59 của ngày kết thúc
+
+            // Đếm số lượng đơn đặt trong khoảng thời gian
+            int count = bookingRepo.countByBookingTimeBetween(startDateTime, endDateTime);
+            Map<String, Object> response = new HashMap<>();
+            response.put("count", count);
+            return ResponseEntity.ok(response);
         }catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
     }
+
+//    @GetMapping("/orders/count-tables")
+//    public ResponseEntity<?> countTablesByDate(@RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+//        try {
+//            int count = bookingRepo.countTablesByDate(date);
+//            return ResponseEntity.ok(Map.of("count", count));
+//        }catch (Exception e) {
+//            e.printStackTrace();
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+//        }
+//
+//    }
+
+//    @GetMapping("/orders/count-tables/range")
+//    public ResponseEntity<Map<String, Object>> countTablesByDateRange(
+//            @RequestParam String startDate,
+//            @RequestParam String endDate) {
+//        try {
+//            // Chuyển đổi từ String sang LocalDate
+//            LocalDate start = LocalDate.parse(startDate);
+//            LocalDate end = LocalDate.parse(endDate);
+//
+//
+//            // Đếm số lượng đơn đặt trong khoảng thời gian
+//            int count = bookingRepo.countTablesByDateRange(start, end);
+//            Map<String, Object> response = new HashMap<>();
+//            response.put("count", count);
+//            return ResponseEntity.ok(response);
+//        }catch (Exception e) {
+//            e.printStackTrace();
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+//        }
+//
+//    }
+    @GetMapping("/orders/count-tables/range")
+    public ResponseEntity<?> countTablesByDateRange(
+            @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        try {
+            // Chuyển đổi startDate và endDate thành LocalDateTime
+            LocalDateTime startDateTime = startDate.atStartOfDay(); // Từ 00:00:00 của ngày bắt đầu
+            LocalDateTime endDateTime = endDate.atTime(23, 59, 59); // Đến 23:59:59 của ngày kết thúc
+
+            // Gọi repository để đếm số bàn
+            int count = bookingRepo.countTablesByDateRange(startDateTime, endDateTime);
+
+            // Trả về kết quả
+            return ResponseEntity.ok(Map.of("count", count));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
 
 
     @GetMapping("/booking_table/{bookingId}")
@@ -412,41 +481,79 @@ public class BookingController {
 
 
     // Endpoint để lấy số bàn được đặt nhiều nhất
-    @GetMapping("/booking_table/most-booked-tables")
-    public ResponseEntity<?> getMostBookedTables(@RequestParam("date") String date) {
-        try {
-            // Chuyển đổi String -> java.sql.Date
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-            java.util.Date parsedDate = sdf.parse(date);
-            java.sql.Date sqlDate = new java.sql.Date(parsedDate.getTime());
+//    @GetMapping("/booking_table/most-booked-tables")
+//    public ResponseEntity<?> getMostBookedTables(@RequestParam("date") String date) {
+//        try {
+//            // Chuyển đổi String -> java.sql.Date
+//            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+//            java.util.Date parsedDate = sdf.parse(date);
+//            java.sql.Date sqlDate = new java.sql.Date(parsedDate.getTime());
+//
+//            List<Object[]> mostBookedTables = bookingTableService.getMostBookedTables(sqlDate);
+//
+//            if (mostBookedTables == null || mostBookedTables.isEmpty()) {
+//                return ResponseEntity.ok(Collections.singletonMap("message", "No bookings found for the specified date."));
+//            }
+//
+//            // Tìm số lần đặt cao nhất
+//            Long maxBookingCount = mostBookedTables.stream()
+//                    .map(row -> (Long) row[1])
+//                    .max(Long::compareTo)
+//                    .orElse(0L);
+//
+//            // Lọc danh sách các bàn có số lần đặt cao nhất
+//            List<Map<String, Object>> result = mostBookedTables.stream()
+//                    .filter(row -> ((Long) row[1]).equals(maxBookingCount))
+//                    .map(row -> Map.of("tableId", row[0], "bookingCount", row[1]))
+//                    .collect(Collectors.toList());
+//
+//            return ResponseEntity.ok(result);
+//
+//        } catch (ParseException e) {
+//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid date format. Please use 'yyyy-MM-dd'.");
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while fetching data.");
+//        }
+//    }
 
-            List<Object[]> mostBookedTables = bookingTableService.getMostBookedTables(sqlDate);
+    @GetMapping("/booking_table/most-booked-tables/range")
+    public ResponseEntity<?> getMostBookedTables(
+            @RequestParam("startDate") String startDateStr,
+            @RequestParam("endDate") String endDateStr) {
+        try {
+            LocalDate startDate = LocalDate.parse(startDateStr);
+            LocalDate endDate = LocalDate.parse(endDateStr);
+
+            List<Object[]> mostBookedTables = bookingTableService.getMostBookedTables(startDate, endDate);
 
             if (mostBookedTables == null || mostBookedTables.isEmpty()) {
-                return ResponseEntity.ok(Collections.singletonMap("message", "No bookings found for the specified date."));
+                return ResponseEntity.ok(Collections.singletonMap("message", "No bookings found for the specified range."));
             }
 
             // Tìm số lần đặt cao nhất
             Long maxBookingCount = mostBookedTables.stream()
-                    .map(row -> (Long) row[1])
+                    .map(row -> ((Number) row[1]).longValue())
                     .max(Long::compareTo)
                     .orElse(0L);
 
             // Lọc danh sách các bàn có số lần đặt cao nhất
             List<Map<String, Object>> result = mostBookedTables.stream()
-                    .filter(row -> ((Long) row[1]).equals(maxBookingCount))
+                    .filter(row -> ((Number) row[1]).longValue() == maxBookingCount)
                     .map(row -> Map.of("tableId", row[0], "bookingCount", row[1]))
                     .collect(Collectors.toList());
 
             return ResponseEntity.ok(result);
 
-        } catch (ParseException e) {
+        } catch (DateTimeParseException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid date format. Please use 'yyyy-MM-dd'.");
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while fetching data.");
         }
     }
+
+
 
 
     @DeleteMapping("/booking_table/delete")
